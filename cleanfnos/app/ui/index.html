@@ -26,6 +26,7 @@
   <button id="tab-sysclean" class="tab" data-tab="sysclean">系统清理</button>
   <button id="tab-schedule" class="tab" data-tab="schedule">定时清理</button>
   <button id="tab-kvm" class="tab" data-tab="kvm">KVM</button>
+  <button id="tab-notify" class="tab" data-tab="notify">通知</button>
 </nav>
 
 <main>
@@ -329,6 +330,22 @@
       <div id="no-kvm-ghosts" class="empty">✅ 未发现鬼影快照</div>
     </div>
     <p class="hint">鬼影快照删除时会自动关停运行中的 VM，删除后恢复原状态（参考 fnos-app-cleaner）。</p>
+  </section>
+
+  <!-- ============ 通知设置页 ============ -->
+  <section id="view-notify" class="view">
+    <div class="toolbar">
+      <button id="btn-notify-load" class="primary">🔄 加载配置</button>
+      <button id="btn-notify-save" class="ok">💾 保存配置</button>
+      <span id="notify-status" class="status"></span>
+    </div>
+    <div class="schedule-form">
+      <label><input type="checkbox" id="notify-enabled"> 启用通知推送</label>
+      <label><input type="checkbox" id="notify-on-schedule"> 定时清理完成后推送报告</label>
+    </div>
+    <h2>通知渠道</h2>
+    <div id="notify-channels"></div>
+    <p class="hint">配置各渠道后点击「测试」验证连通性。SSRF 防护：仅允许公网 http(s) 地址，内网/保留地址将被拒绝。通知会随定时清理报告自动推送（需在上方勾选「定时清理完成后推送报告」）。</p>
   </section>
 </main>
 

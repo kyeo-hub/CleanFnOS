@@ -20,7 +20,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 const PORT = parseInt(process.env.PORT || '47939', 10);
-const VERSION = '1.4.0';
+const VERSION = '1.5.0';
 
 // 数据目录（cmd/main 注入 TRIM_PKGVAR；未注入时退化到本地 var）
 const VAR_DIR = process.env.TRIM_PKGVAR || path.join(__dirname, '..', '..', 'var');
@@ -37,6 +37,7 @@ const bigfilesApi = require('./api/bigfiles.js');
 const syscleanApi = require('./api/sysclean.js');
 const scheduleApi = require('./api/schedule.js');
 const kvmApi = require('./api/kvm.js');
+const notifyApi = require('./api/notify.js');
 
 // ---------------- token 鉴权 ----------------
 const CONFIG_FILE = process.env.TRIM_PKGETC ? path.join(process.env.TRIM_PKGETC, 'config.conf') : null;
@@ -404,6 +405,30 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    // ---- M5 模块路由 ----
+
+    // GET /api/notify（通知配置 + 渠道元数据）
+    if (method === 'GET' && p === '/api/notify') {
+      sendJSON(res, 200, { success: true, config: notifyApi.getNotifyConfig(), channels: notifyApi.CHANNEL_META });
+      return;
+    }
+
+    // POST /api/notify（保存通知配置）
+    if (method === 'POST' && p === '/api/notify') {
+      const body = await readBody(req);
+      const cfg = notifyApi.setNotifyConfig(body);
+      sendJSON(res, 200, { success: true, config: cfg });
+      return;
+    }
+
+    // POST /api/notify/test（测试发送）
+    if (method === 'POST' && p === '/api/notify/test') {
+      const body = await readBody(req);
+      const r = await notifyApi.testNotify(body.channel || '');
+      sendJSON(res, 200, { success: r.ok, ...r });
+      return;
+    }
+
     sendJSON(res, 404, { success: false, error: 'not found' });
   } catch (e) {
     sendJSON(res, 500, { success: false, error: String(e && e.message || e) });
@@ -417,7 +442,11 @@ scheduleApi.initSchedule(VAR_DIR, {
   docker: dockerApi,
   tmp: tmpApi,
   trash: trashApi,
+  notify: notifyApi,
 });
+
+// 初始化通知配置（注入数据目录）
+notifyApi.initNotify(VAR_DIR);
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`CleanFnOS server listening on http://0.0.0.0:${PORT} (v${VERSION})`);

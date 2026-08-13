@@ -17,6 +17,7 @@ const state = {
   scheduleLoaded: false, // 定时清理配置是否已加载
   kvmVms: [],    // KVM 虚拟机 { name, state, disks }
   kvmGhosts: [], // 鬼影快照 { vm, vmState, disk, id, tag, size, sizeText, date }
+  notifyChannels: [], // 通知渠道元数据 [{ id, label, fields }]
 };
 
 const TOKEN_KEY = 'cleanfnos_token';
@@ -1074,6 +1075,78 @@ $('btn-kvm-delete').addEventListener('click', () => {
   });
 });
 
+/* ---------- 通知设置 ---------- */
+async function loadNotify() {
+  try {
+    const j = await api('/notify');
+    const c = j.config || {};
+    state.notifyChannels = j.channels || [];
+    $('notify-enabled').checked = !!c.enabled;
+    $('notify-on-schedule').checked = !!c.onScheduleComplete;
+    renderNotifyChannels(c.channels || {});
+    toast('通知配置已加载');
+  } catch (e) { toast('加载通知配置失败: ' + e.message, false); }
+}
+
+function renderNotifyChannels(channels) {
+  const wrap = $('notify-channels');
+  wrap.innerHTML = '';
+  for (const meta of state.notifyChannels) {
+    const ch = channels[meta.id] || {};
+    const card = document.createElement('div');
+    card.className = 'dup-card';
+    const fields = meta.fields.map((f) => {
+      const label = { key: 'Key', server: '服务器(可选)', token: 'Token', secret: '签名密钥(可选)', webhook: 'Webhook URL', chatId: 'Chat ID', apiHost: 'API Host(可选)', url: 'URL', headers: 'Headers(JSON,可选)', body: 'Body(模板,可选)' }[f] || f;
+      const ph = { key: '如 xxxxxxxx', token: 'access_token', webhook: 'https://...', chatId: '如 123456789', url: 'https://...', headers: '{"X-Token":"..."}', body: '{"text":"${content}"}' }[f] || '';
+      return `<div class="notify-field"><label>${label}</label>
+        <input type="text" data-cid="${meta.id}" data-field="${f}" value="${esc(ch[f] || '')}" placeholder="${esc(ph)}"
+          style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--panel2);color:var(--text)"></div>`;
+    }).join('');
+    card.innerHTML = `<div class="dup-head"><label><input type="checkbox" class="notify-enable" data-cid="${meta.id}" ${ch.enabled ? 'checked' : ''}> <b>${esc(meta.label)}</b></label>
+      <button class="plain notify-test" data-cid="${meta.id}" style="float:right">📨 测试</button></div>
+      <div class="notify-fields">${fields}</div>`;
+    wrap.appendChild(card);
+  }
+}
+
+function collectNotifyChannels() {
+  const channels = {};
+  document.querySelectorAll('#notify-channels .dup-card').forEach((card) => {
+    const cid = card.querySelector('.notify-enable').dataset.cid;
+    const ch = { enabled: card.querySelector('.notify-enable').checked };
+    card.querySelectorAll('.notify-field input').forEach((inp) => {
+      ch[inp.dataset.field] = inp.value.trim();
+    });
+    channels[cid] = ch;
+  });
+  return channels;
+}
+
+async function saveNotify() {
+  try {
+    const j = await api('/notify', {
+      enabled: $('notify-enabled').checked,
+      onScheduleComplete: $('notify-on-schedule').checked,
+      channels: collectNotifyChannels(),
+    });
+    toast('通知配置已保存');
+  } catch (e) { toast('保存失败: ' + e.message, false); }
+}
+
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('.notify-test');
+  if (!btn) return;
+  const cid = btn.dataset.cid;
+  // 测试前先保存当前表单（含未保存的字段）
+  api('/notify', {
+    enabled: $('notify-enabled').checked,
+    onScheduleComplete: $('notify-on-schedule').checked,
+    channels: collectNotifyChannels(),
+  }).then(() => api('/notify/test', { channel: cid })).then((r) => {
+    toast(r.success ? '测试发送成功' : '测试失败: ' + (r.message || ''), !!r.success);
+  }).catch((err) => toast('测试失败: ' + err.message, false));
+});
+
 /* ---------- Tab 切换 ---------- */
 document.querySelectorAll('.tab').forEach((b) => {
   b.addEventListener('click', () => {
@@ -1093,6 +1166,7 @@ document.querySelectorAll('.tab').forEach((b) => {
     else if (tab === 'sysclean' && !state.sysclean.length) scanSysclean();
     else if (tab === 'schedule' && !state.scheduleLoaded) loadSchedule();
     else if (tab === 'kvm' && !state.kvmVms.length) scanKvm();
+    else if (tab === 'notify' && !state.notifyChannels.length) loadNotify();
   });
 });
 
@@ -1116,6 +1190,8 @@ document.querySelectorAll('.tab').forEach((b) => {
   $('btn-schedule-save').addEventListener('click', saveSchedule);
   $('btn-schedule-run').addEventListener('click', runScheduleNow);
   $('btn-kvm-scan').addEventListener('click', scanKvm);
+  $('btn-notify-load').addEventListener('click', loadNotify);
+  $('btn-notify-save').addEventListener('click', saveNotify);
   $('btn-theme').addEventListener('click', () => {
     applyTheme(document.body.classList.contains('light') ? 'dark' : 'light');
   });

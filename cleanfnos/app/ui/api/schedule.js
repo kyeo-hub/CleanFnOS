@@ -35,14 +35,16 @@ let config = { ...DEFAULT_CONFIG };
 let timerHandle = null;
 let isRunning = false;
 let apiModules = null;
+let notifyApi = null; // M5 通知模块引用（清理完成后推送报告）
 
 // ---------------- 初始化 ----------------
 
-/** 由 server.js 调用：注入数据目录与 api 模块引用 */
+/** 由 server.js 调用：注入数据目录与 api 模块引用（含 notify 模块用于清理报告推送） */
 function initSchedule(varDir, mods) {
   configPath = path.join(varDir, 'schedule.json');
   reportsDir = path.join(varDir, 'schedule_reports');
   apiModules = mods;
+  if (mods && mods.notify) notifyApi = mods.notify;
   try {
     fs.mkdirSync(varDir, { recursive: true });
     fs.mkdirSync(reportsDir, { recursive: true });
@@ -201,6 +203,20 @@ async function executeCleanup() {
         : (report.totalBytes / 1024 / 1024).toFixed(2) + ' MB';
       await fsp.writeFile(path.join(reportsDir, name), JSON.stringify(report, null, 2));
     } catch (e) { /* 报告写入失败不阻断 */ }
+    // 通知推送：清理完成后向启用渠道推送报告摘要（M5，配合 onScheduleComplete 配置）
+    if (notifyApi) {
+      try {
+        const ncfg = notifyApi.getNotifyConfig();
+        if (ncfg.enabled && ncfg.onScheduleComplete) {
+          const done = Object.values(report.types || {}).filter((t) => t && t.status === 'done').length;
+          const errCount = report.errors.length;
+          const title = `CleanFnOS 定时清理完成（${done} 类成功${errCount ? `，${errCount} 错误` : ''}）`;
+          const lines = report.deleted.map((d) => `- ${d.detail || d.type}`).join('\n');
+          const content = `执行时间：${new Date(startedAt).toLocaleString('zh-CN')}\n释放空间：${report.totalBytesText || '0 B'}\n${lines || '（无清理项）'}`;
+          notifyApi.notifyAll(title, content);
+        }
+      } catch (e) { /* 通知失败不阻断清理 */ }
+    }
     isRunning = false;
   }
   return report;
