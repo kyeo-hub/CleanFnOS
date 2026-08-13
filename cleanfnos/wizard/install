@@ -40,6 +40,19 @@
                         "message": "密码长度 4-64 个字符"
                     }
                 ]
+            },
+            {
+                "type": "password",
+                "field": "wizard_token_confirm",
+                "label": "确认访问密码",
+                "helpText": "再次输入访问密码，确保没有输入错误。",
+                "initValue": "",
+                "rules": [
+                    {
+                        "required": true,
+                        "message": "请再次输入访问密码"
+                    }
+                ]
             }
         ]
     }

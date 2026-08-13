@@ -77,6 +77,40 @@ function checkAuth(req) {
   } catch (e) { return false; }
 }
 
+/** 恒时比较两个 token 是否相等 */
+function tokenEquals(a, b) {
+  try {
+    const ba = Buffer.from(String(a || ''));
+    const bb = Buffer.from(String(b || ''));
+    return ba.length === bb.length && crypto.timingSafeEqual(ba, bb);
+  } catch (e) { return false; }
+}
+
+/** 修改访问密码：校验旧密码，更新 config.conf 的 auth_token 行，同步内存 */
+function changeAuthToken(oldToken, newToken) {
+  if (typeof newToken !== 'string' || newToken.length < 4 || newToken.length > 64) {
+    return { ok: false, message: '新密码长度须为 4-64 个字符' };
+  }
+  if (!tokenEquals(oldToken, AUTH_TOKEN)) {
+    return { ok: false, message: '当前密码不正确' };
+  }
+  if (CONFIG_FILE) {
+    try {
+      let conf = fs.readFileSync(CONFIG_FILE, 'utf8');
+      if (/^auth_token\s*=/m.test(conf)) {
+        conf = conf.replace(/^auth_token\s*=.*$/m, `auth_token=${newToken}`);
+      } else {
+        conf += `\nauth_token=${newToken}\n`;
+      }
+      fs.writeFileSync(CONFIG_FILE, conf);
+    } catch (e) {
+      return { ok: false, message: '写入配置文件失败: ' + String(e && e.message || e) };
+    }
+  }
+  AUTH_TOKEN = newToken;
+  return { ok: true, message: '密码已修改' };
+}
+
 // ---------------- 工具函数 ----------------
 
 function sendJSON(res, code, obj) {
@@ -96,6 +130,14 @@ function readBody(req) {
     req.on('end', () => { try { resolve(data ? JSON.parse(data) : {}); } catch (e) { reject(e); } });
     req.on('error', reject);
   });
+}
+
+/** 操作审计：追加写入数据目录 operation.log（JSON 行，含时间/类型/结果） */
+function auditLog(type, detail) {
+  try {
+    const line = JSON.stringify({ time: new Date().toISOString(), type, ...detail }) + '\n';
+    fs.appendFileSync(path.join(VAR_DIR, 'operation.log'), line);
+  } catch (e) { /* 审计失败不阻断操作 */ }
 }
 
 // ---------------- HTTP 路由 ----------------
@@ -156,6 +198,7 @@ const server = http.createServer(async (req, res) => {
         users: Array.isArray(body.users) ? body.users : [],
         mode,
       });
+      auditLog('app-delete', { mode, paths: (body.paths || []).length, links: (body.links || []).length, users: (body.users || []).length, moved: r.moved.length, failed: r.failed.length });
       sendJSON(res, 200, { success: r.failed.length === 0, moved: r.moved, failed: r.failed });
       return;
     }
@@ -184,6 +227,7 @@ const server = http.createServer(async (req, res) => {
     // POST /api/trash/empty
     if (method === 'POST' && p === '/api/trash/empty') {
       const r = await appApi.trashEmpty();
+      auditLog('trash-empty', { removed: r.removed, failed: r.failed.length });
       sendJSON(res, 200, { success: r.failed.length === 0, removed: r.removed, failed: r.failed });
       return;
     }
@@ -205,6 +249,7 @@ const server = http.createServer(async (req, res) => {
         paths: Array.isArray(body.paths) ? body.paths : [],
         mode,
       });
+      auditLog('netdisk-delete', { mode, paths: (body.paths || []).length, moved: r.moved.length, failed: r.failed.length });
       sendJSON(res, 200, { success: r.failed.length === 0, moved: r.moved, failed: r.failed });
       return;
     }
@@ -226,6 +271,7 @@ const server = http.createServer(async (req, res) => {
         images: Array.isArray(body.images) ? body.images : [],
         buildCache: !!body.buildCache,
       });
+      auditLog('docker-delete', { containers: (body.containers || []).length, volumes: (body.volumes || []).length, networks: (body.networks || []).length, images: (body.images || []).length, buildCache: !!body.buildCache, moved: r.moved.length, failed: r.failed.length });
       sendJSON(res, 200, { success: r.failed.length === 0, moved: r.moved, failed: r.failed });
       return;
     }
@@ -245,6 +291,7 @@ const server = http.createServer(async (req, res) => {
         paths: Array.isArray(body.paths) ? body.paths : [],
         mode,
       });
+      auditLog('tmp-delete', { mode, paths: (body.paths || []).length, moved: r.moved.length, failed: r.failed.length });
       sendJSON(res, 200, { success: r.failed.length === 0, moved: r.moved, failed: r.failed });
       return;
     }
@@ -261,6 +308,7 @@ const server = http.createServer(async (req, res) => {
     if (method === 'POST' && p === '/api/trash/system/delete') {
       const body = await readBody(req);
       const r = await trashApi.deleteTrashItems({ paths: Array.isArray(body.paths) ? body.paths : [] });
+      auditLog('sys-trash-delete', { paths: (body.paths || []).length, removed: r.removed.length, failed: r.failed.length });
       sendJSON(res, 200, { success: r.failed.length === 0, removed: r.removed, failed: r.failed });
       return;
     }
@@ -282,6 +330,7 @@ const server = http.createServer(async (req, res) => {
         paths: Array.isArray(body.paths) ? body.paths : [],
         mode,
       });
+      auditLog('empty-delete', { mode, paths: (body.paths || []).length, moved: r.moved.length, failed: r.failed.length });
       sendJSON(res, 200, { success: r.failed.length === 0, moved: r.moved, failed: r.failed });
       return;
     }
@@ -309,6 +358,7 @@ const server = http.createServer(async (req, res) => {
         files: Array.isArray(body.files) ? body.files : [],
         mode,
       });
+      auditLog('dup-delete', { mode, files: (body.files || []).length, moved: r.moved.length, failed: r.failed.length });
       sendJSON(res, 200, { success: r.failed.length === 0, moved: r.moved, failed: r.failed });
       return;
     }
@@ -338,6 +388,7 @@ const server = http.createServer(async (req, res) => {
     if (method === 'POST' && p === '/api/sysclean/delete') {
       const body = await readBody(req);
       const r = await syscleanApi.sysCleanDelete({ paths: Array.isArray(body.paths) ? body.paths : [] });
+      auditLog('sysclean-delete', { paths: (body.paths || []).length, cleaned: r.cleaned.length, failed: r.failed.length, totalBytes: r.totalBytes });
       sendJSON(res, 200, { success: r.failed.length === 0, cleaned: r.cleaned, failed: r.failed, totalBytes: r.totalBytes });
       return;
     }
@@ -393,6 +444,7 @@ const server = http.createServer(async (req, res) => {
       const r = await kvmApi.deleteGhostSnapshots({
         snapshots: Array.isArray(body.snapshots) ? body.snapshots : [],
       });
+      auditLog('kvm-delete', { snapshots: (body.snapshots || []).length, removed: r.removed.length, failed: r.failed.length });
       sendJSON(res, 200, { success: r.failed.length === 0, removed: r.removed, failed: r.failed });
       return;
     }
@@ -406,6 +458,14 @@ const server = http.createServer(async (req, res) => {
     }
 
     // ---- M5 模块路由 ----
+
+    // POST /api/password（修改访问密码，需校验旧密码）
+    if (method === 'POST' && p === '/api/password') {
+      const body = await readBody(req);
+      const r = changeAuthToken(body.oldPassword || '', body.newPassword || '');
+      sendJSON(res, r.ok ? 200 : 400, { success: r.ok, message: r.message });
+      return;
+    }
 
     // GET /api/notify（通知配置 + 渠道元数据）
     if (method === 'GET' && p === '/api/notify') {

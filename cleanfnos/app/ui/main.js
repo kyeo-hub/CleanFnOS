@@ -95,15 +95,36 @@ function askToken() {
 
 /* ---------- 弹窗确认 ---------- */
 let modalCb = null;
-function confirmDialog(title, text, okLabel, cb) {
+/** requireAck=true 时强制勾选「已知晓不可恢复」才能确认（用于永久删除类危险操作） */
+function confirmDialog(title, text, okLabel, cb, requireAck = false) {
   $('modal-title').textContent = title;
-  $('modal-text').innerHTML = text;
+  $('modal-text').innerHTML = text +
+    (requireAck ? `<div style="margin-top:12px;padding:10px;border:1px solid var(--danger);border-radius:8px;background:rgba(239,68,68,.08)">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text)">
+        <input type="checkbox" id="ack-irreversible"> <b style="color:#d33">我已知晓此操作不可恢复</b>
+      </label></div>` : '');
   $('modal-ok').textContent = okLabel || '确认';
   modalCb = cb;
+  const ack = $('ack-irreversible');
+  if (requireAck) {
+    $('modal-ok').disabled = true;
+    ack.onchange = () => { $('modal-ok').disabled = !ack.checked; };
+  } else {
+    $('modal-ok').disabled = false;
+  }
   $('modal').classList.remove('hidden');
 }
-$('modal-cancel').onclick = () => $('modal').classList.add('hidden');
-$('modal-ok').onclick = () => { $('modal').classList.add('hidden'); if (modalCb) modalCb(); };
+$('modal-cancel').onclick = () => { $('modal').classList.add('hidden'); $('modal-ok').disabled = false; };
+$('modal-ok').onclick = () => {
+  $('modal').classList.add('hidden');
+  $('modal-ok').disabled = false;
+  if (modalCb) modalCb();
+};
+
+/** 危险永久删除类操作：强制勾选「已知晓不可恢复」才能确认 */
+function dangerConfirm(title, text, okLabel, cb) {
+  confirmDialog(title, text, okLabel, cb, true);
+}
 
 /* ---------- 扫描 ---------- */
 async function doScan() {
@@ -351,7 +372,7 @@ $('btn-trash-restore').addEventListener('click', () => {
   });
 });
 $('btn-trash-empty').addEventListener('click', () => {
-  confirmDialog('⚠️ 清空回收站', `将永久删除回收站中全部 <b>${state.trash.length}</b> 项，<b style="color:#d33">不可恢复</b>！确定吗？`, '全部删除', async () => {
+  dangerConfirm('⚠️ 清空回收站', `将永久删除回收站中全部 <b>${state.trash.length}</b> 项，<b style="color:#d33">不可恢复</b>！确定吗？`, '全部删除', async () => {
     try {
       const j = await api('/trash/empty', {});
       toast(`已清空 ${j.removed} 项${(j.failed || []).length ? `，${j.failed.length} 项失败` : ''}`);
@@ -500,7 +521,7 @@ $('btn-docker-delete').addEventListener('click', () => {
   const total = s.containers.length + s.volumes.length + s.networks.length + s.images.length + ($('docker-buildcache').checked ? 1 : 0);
   if (!total) return;
   const buildCacheNote = $('docker-buildcache').checked ? '<br>将清理 <b>Build Cache</b>' : '';
-  confirmDialog('⚠️ Docker 资源清理确认', `将永久删除（Docker 无回收站）：<br>` +
+  dangerConfirm('⚠️ Docker 资源清理确认', `将永久删除（Docker 无回收站）：<br>` +
     `${s.containers.length} 个已停止容器、${s.volumes.length} 个未用卷、${s.networks.length} 个未用网络、${s.images.length} 个 dangling 镜像${buildCacheNote}<br><br>` +
     '<b style="color:#d33">永久删除不可恢复！</b> 确定继续吗？', '永久删除', async () => {
     try {
@@ -631,7 +652,7 @@ $('chk-all-sys-trash').addEventListener('change', (e) => {
 $('btn-sys-trash-delete').addEventListener('click', () => {
   const paths = selectedSysTrash();
   if (!paths.length) return;
-  confirmDialog('⚠️ 系统回收站永久清理确认', `将<b style="color:#d33">永久删除</b> <b>${paths.length}</b> 项回收站内容（回收站内容无需再进回收站，不可恢复）。确定继续吗？`, '永久删除', async () => {
+  dangerConfirm('⚠️ 系统回收站永久清理确认', `将<b style="color:#d33">永久删除</b> <b>${paths.length}</b> 项回收站内容（回收站内容无需再进回收站，不可恢复）。确定继续吗？`, '永久删除', async () => {
     try {
       const j = await api('/trash/system/delete', { paths });
       toast(`完成：${(j.removed || []).length} 项成功${(j.failed || []).length ? `，${j.failed.length} 项失败` : ''}`);
@@ -890,7 +911,7 @@ $('btn-sysclean-delete').addEventListener('click', () => {
     const it = state.sysclean.find((i) => i.path === p);
     return it && it.risk === 'high';
   });
-  confirmDialog('⚠️ 系统清理确认',
+  dangerConfirm('⚠️ 系统清理确认',
     `将<b style="color:#d33">永久删除</b> <b>${paths.length}</b> 项缓存/日志（不可恢复，缓存会按需重建）<br><br>` +
     (hasHigh ? '<b style="color:#d33">⚠️ 包含高风险项（浏览器缓存/Playwright，会丢登录态或需重下载）！</b><br>' : '') +
     '确定继续吗？', '永久清理', async () => {
@@ -1065,7 +1086,7 @@ $('chk-all-kvm').addEventListener('change', (e) => {
 $('btn-kvm-delete').addEventListener('click', () => {
   const snaps = selectedKvmGhosts();
   if (!snaps.length) return;
-  confirmDialog('⚠️ 鬼影快照删除确认', `将删除 <b>${snaps.length}</b> 个鬼影快照（运行中的 VM 会自动关停，删除后恢复）。<br><br><b style="color:#d33">删除不可恢复！</b> 确定继续吗？`, '永久删除', async () => {
+  dangerConfirm('⚠️ 鬼影快照删除确认', `将删除 <b>${snaps.length}</b> 个鬼影快照（运行中的 VM 会自动关停，删除后恢复）。<br><br><b style="color:#d33">删除不可恢复！</b> 确定继续吗？`, '永久删除', async () => {
     try {
       const j = await api('/kvm/delete', { snapshots: snaps });
       toast(`完成：${(j.removed || []).length} 个成功${(j.failed || []).length ? `，${j.failed.length} 个失败` : ''}`);
@@ -1147,6 +1168,48 @@ document.addEventListener('click', (e) => {
   }).catch((err) => toast('测试失败: ' + err.message, false));
 });
 
+/* ---------- 修改访问密码 ---------- */
+function showPasswdDialog() {
+  $('modal-title').textContent = '🔑 修改访问密码';
+  $('modal-text').innerHTML = `
+    <div>修改后旧密码立即失效，请牢记新密码：</div>
+    <input id="pw-old" type="password" placeholder="当前密码" autocomplete="off"
+      style="width:100%;margin-top:10px;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--panel2);color:var(--text)">
+    <input id="pw-new" type="password" placeholder="新密码（4-64 位）" autocomplete="off"
+      style="width:100%;margin-top:8px;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--panel2);color:var(--text)">
+    <input id="pw-confirm" type="password" placeholder="确认新密码" autocomplete="off"
+      style="width:100%;margin-top:8px;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--panel2);color:var(--text)">
+  `;
+  $('modal-ok').textContent = '修改密码';
+  const okOld = $('modal-ok').onclick;
+  $('modal-cancel').onclick = () => { $('modal').classList.add('hidden'); $('modal-ok').onclick = okOld; };
+  $('modal-ok').onclick = async () => {
+    const oldPw = $('pw-old').value.trim();
+    const newPw = $('pw-new').value.trim();
+    const confirmPw = $('pw-confirm').value.trim();
+    if (!oldPw || !newPw) { toast('请填写当前密码和新密码', false); return; }
+    if (newPw.length < 4 || newPw.length > 64) { toast('新密码长度须为 4-64 位', false); return; }
+    if (newPw !== confirmPw) { toast('两次输入的新密码不一致', false); return; }
+    try {
+      // 修改成功后更新本地 token 为旧 token 传入（接口成功即已切换，前端改用新密码）
+      const r = await api('/password', { oldPassword: oldPw, newPassword: newPw });
+      if (r.success) {
+        apiToken = newPw;
+        localStorage.setItem(TOKEN_KEY, newPw);
+        toast('密码已修改，请牢记新密码');
+        $('modal').classList.add('hidden');
+        $('modal-ok').onclick = okOld;
+      } else {
+        toast(r.message || '修改失败', false);
+      }
+    } catch (e) {
+      toast('修改失败: ' + e.message, false);
+    }
+  };
+  $('modal').classList.remove('hidden');
+  setTimeout(() => { const i = $('pw-old'); if (i) i.focus(); }, 50);
+}
+
 /* ---------- Tab 切换 ---------- */
 document.querySelectorAll('.tab').forEach((b) => {
   b.addEventListener('click', () => {
@@ -1192,6 +1255,7 @@ document.querySelectorAll('.tab').forEach((b) => {
   $('btn-kvm-scan').addEventListener('click', scanKvm);
   $('btn-notify-load').addEventListener('click', loadNotify);
   $('btn-notify-save').addEventListener('click', saveNotify);
+  $('btn-passwd').addEventListener('click', showPasswdDialog);
   $('btn-theme').addEventListener('click', () => {
     applyTheme(document.body.classList.contains('light') ? 'dark' : 'light');
   });

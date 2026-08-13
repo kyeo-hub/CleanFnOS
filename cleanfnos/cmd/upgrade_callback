@@ -1,5 +1,39 @@
 #!/bin/bash
 
 ### This script is called after the user upgrades the application.
+### 记录升级日志，并校验用户配置（端口/访问密码）在升级后仍然保留；
+### 数据（回收站/审计/报告/备份）存放在 $TRIM_PKGVAR，升级不触碰。
 
+set -euo pipefail
+
+log_msg() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> "${TRIM_PKGVAR:-/tmp}/info.log" 2>/dev/null || true
+}
+
+log_msg "upgrade_callback: start (old=${TRIM_OLD_APPVER:-unknown} -> new=${TRIM_APPVER:-unknown})"
+
+# 1. 校验配置目录存在（install_callback 写入 config.conf）
+if [ ! -d "${TRIM_PKGETC:-/nonexistent}" ]; then
+    log_msg "upgrade: WARN TRIM_PKGETC missing, creating"
+    mkdir -p "${TRIM_PKGETC}"
+fi
+
+# 2. 校验 config.conf 存在；缺失时按默认重建（端口 47939 + 生成新 token），不阻断升级
+if [ ! -f "${TRIM_PKGETC}/config.conf" ]; then
+    log_msg "upgrade: WARN config.conf missing, regenerating defaults"
+    printf 'wizard_app_port=%s\n' "${wizard_app_port:-47939}" > "${TRIM_PKGETC}/config.conf"
+    TOKEN="$(head -c 16 /dev/urandom | od -An -tx1 | tr -d ' \n')"
+    printf 'auth_token=%s\n' "${TOKEN}" >> "${TRIM_PKGETC}/config.conf"
+    log_msg "upgrade: regenerated config.conf with new auth_token"
+else
+    log_msg "upgrade: config.conf preserved (port + auth_token)"
+fi
+
+# 3. 校验数据目录（回收站/审计/报告）仍在
+if [ ! -d "${TRIM_PKGVAR:-/nonexistent}" ]; then
+    log_msg "upgrade: WARN TRIM_PKGVAR missing, creating"
+    mkdir -p "${TRIM_PKGVAR}"
+fi
+
+log_msg "upgrade_callback: done (config preserved)"
 exit 0

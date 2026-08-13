@@ -17,6 +17,11 @@ log_msg "persisted wizard_app_port=${PORT}"
 
 # 访问令牌：向导填写则使用，留空则自动生成 32 位十六进制
 TOKEN="${wizard_token:-}"
+if [ -n "${TOKEN}" ] && [ -n "${wizard_token_confirm:-}" ] && [ "${TOKEN}" != "${wizard_token_confirm}" ]; then
+    log_msg "ERROR: 两次输入的访问密码不一致"
+    echo "两次输入的访问密码不一致，请返回重新设置" >&2
+    exit 1
+fi
 if [ -z "${TOKEN}" ]; then
     TOKEN="$(head -c 16 /dev/urandom | od -An -tx1 | tr -d ' \n')"
 fi
