@@ -20,13 +20,18 @@ const path = require('path');
 const crypto = require('crypto');
 
 const PORT = parseInt(process.env.PORT || '47939', 10);
-const VERSION = '1.1.0';
+const VERSION = '1.2.0';
 
 // 数据目录（cmd/main 注入 TRIM_PKGVAR；未注入时退化到本地 var）
 const VAR_DIR = process.env.TRIM_PKGVAR || path.join(__dirname, '..', '..', 'var');
 process.env.TRASH_DIR = path.join(VAR_DIR, 'trash');
 
 const appApi = require('./api/app.js');
+const netdiskApi = require('./api/netdisk.js');
+const dockerApi = require('./api/docker.js');
+const tmpApi = require('./api/tmp.js');
+const trashApi = require('./api/trash.js');
+const emptyApi = require('./api/empty.js');
 
 // ---------------- token 鉴权 ----------------
 const CONFIG_FILE = process.env.TRIM_PKGETC ? path.join(process.env.TRIM_PKGETC, 'config.conf') : null;
@@ -47,6 +52,15 @@ function loadAuthToken() {
 loadAuthToken();
 
 function checkAuth(req) {
+  // 统一网关模式：fnOS 网关以 loopback 代理注入 X-Trim-Userid，仅在来源为本机时信任
+  // （参考 fnos-logmanager：远端客户端可伪造该头，非 loopback 一律忽略）
+  const isLoopback = (() => {
+    const addr = req.socket && req.socket.remoteAddress;
+    return addr === '127.0.0.1' || addr === '::1' || addr === '::ffff:127.0.0.1';
+  })();
+  if (isLoopback && req.headers['x-trim-userid']) {
+    return true;
+  }
   if (!AUTH_TOKEN) return true;
   const h = req.headers['x-auth-token'];
   if (!h) return false;
@@ -165,6 +179,104 @@ const server = http.createServer(async (req, res) => {
     if (method === 'POST' && p === '/api/trash/empty') {
       const r = await appApi.trashEmpty();
       sendJSON(res, 200, { success: r.failed.length === 0, removed: r.removed, failed: r.failed });
+      return;
+    }
+
+    // ---- M2 模块路由 ----
+
+    // POST /api/netdisk/scan
+    if (method === 'POST' && p === '/api/netdisk/scan') {
+      const items = netdiskApi.scanNetdiskResiduals();
+      sendJSON(res, 200, { success: true, items });
+      return;
+    }
+
+    // POST /api/netdisk/delete
+    if (method === 'POST' && p === '/api/netdisk/delete') {
+      const body = await readBody(req);
+      const mode = body.mode === 'permanent' ? 'permanent' : 'trash';
+      const r = await netdiskApi.deleteNetdiskItems({
+        paths: Array.isArray(body.paths) ? body.paths : [],
+        mode,
+      });
+      sendJSON(res, 200, { success: r.failed.length === 0, moved: r.moved, failed: r.failed });
+      return;
+    }
+
+    // POST /api/docker/scan
+    if (method === 'POST' && p === '/api/docker/scan') {
+      const r = await dockerApi.scanDocker();
+      sendJSON(res, 200, { success: true, ...r });
+      return;
+    }
+
+    // POST /api/docker/delete
+    if (method === 'POST' && p === '/api/docker/delete') {
+      const body = await readBody(req);
+      const r = await dockerApi.deleteDocker({
+        containers: Array.isArray(body.containers) ? body.containers : [],
+        volumes: Array.isArray(body.volumes) ? body.volumes : [],
+        networks: Array.isArray(body.networks) ? body.networks : [],
+        images: Array.isArray(body.images) ? body.images : [],
+        buildCache: !!body.buildCache,
+      });
+      sendJSON(res, 200, { success: r.failed.length === 0, moved: r.moved, failed: r.failed });
+      return;
+    }
+
+    // POST /api/tmp/scan
+    if (method === 'POST' && p === '/api/tmp/scan') {
+      const items = tmpApi.scanTmp();
+      sendJSON(res, 200, { success: true, items });
+      return;
+    }
+
+    // POST /api/tmp/delete
+    if (method === 'POST' && p === '/api/tmp/delete') {
+      const body = await readBody(req);
+      const mode = body.mode === 'permanent' ? 'permanent' : 'trash';
+      const r = await tmpApi.deleteTmpFiles({
+        paths: Array.isArray(body.paths) ? body.paths : [],
+        mode,
+      });
+      sendJSON(res, 200, { success: r.failed.length === 0, moved: r.moved, failed: r.failed });
+      return;
+    }
+
+    // POST /api/trash/system（扫描系统回收站 .@#local/trash）
+    if (method === 'POST' && p === '/api/trash/system') {
+      const items = trashApi.scanSystemTrash();
+      const summary = trashApi.summarizeTrash(items);
+      sendJSON(res, 200, { success: true, items, summary });
+      return;
+    }
+
+    // POST /api/trash/system/delete
+    if (method === 'POST' && p === '/api/trash/system/delete') {
+      const body = await readBody(req);
+      const r = await trashApi.deleteTrashItems({ paths: Array.isArray(body.paths) ? body.paths : [] });
+      sendJSON(res, 200, { success: r.failed.length === 0, removed: r.removed, failed: r.failed });
+      return;
+    }
+
+    // POST /api/empty/scan
+    if (method === 'POST' && p === '/api/empty/scan') {
+      const body = await readBody(req);
+      const r = emptyApi.scanEmpty({ root: body.root || '/vol1' });
+      if (r.error) { sendJSON(res, 400, { success: false, error: r.error }); return; }
+      sendJSON(res, 200, { success: true, root: r.root, dirs: r.dirs });
+      return;
+    }
+
+    // POST /api/empty/delete
+    if (method === 'POST' && p === '/api/empty/delete') {
+      const body = await readBody(req);
+      const mode = body.mode === 'permanent' ? 'permanent' : 'trash';
+      const r = await emptyApi.deleteEmptyDirs({
+        paths: Array.isArray(body.paths) ? body.paths : [],
+        mode,
+      });
+      sendJSON(res, 200, { success: r.failed.length === 0, moved: r.moved, failed: r.failed });
       return;
     }
 

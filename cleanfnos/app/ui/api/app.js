@@ -41,6 +41,26 @@ function isSafeTrashName(n) {
   return typeof n === 'string' && n.length > 0 && n.length < 200 && !n.includes('/') && !n.includes('..');
 }
 
+/** 恢复目标路径白名单：@app 残留路径（原有）、/tmp、/var/tmp 下的一级路径（tmp 清理条目）、
+ *  或 /volN 下非系统保留目录的普通路径（empty 空目录条目）。 */
+function isSafeRestorePath(p) {
+  if (typeof p !== 'string') return false;
+  if (isSafeAppPath(p)) return true;
+  if (/^\/tmp\/[^/]+$/.test(p) || /^\/var\/tmp\/[^/]+$/.test(p)) return true;
+  // empty 空目录：/volN/<name>/... 且不含 @app* / .@# / docker / lost+found 系统段
+  if (/^\/vol\d+\//.test(p) && !p.includes('..')) {
+    const segs = p.split('/').filter(Boolean);
+    if (segs.length < 2) return false;
+    if (segs[0].startsWith('@app') || segs[0].startsWith('.@#')) return false;
+    for (let i = 1; i < segs.length; i++) {
+      if (segs[i].startsWith('.@#') || segs[i] === '@appshare' ||
+          segs[i] === 'docker' || segs[i] === 'lost+found') return false;
+    }
+    return true;
+  }
+  return false;
+}
+
 // ---------------- 已安装应用列表 ----------------
 
 /** 解析 appcenter-cli list 的表格输出，返回 appname 数组 */
@@ -396,9 +416,11 @@ async function trashList() {
     let st;
     try { st = await fsp.stat(dir); } catch (e) { continue; }
     if (!st.isDirectory()) continue;
-    const metaPath = path.join(dir, 'manifest.json');
+    // 元数据：同级 <name>.meta.json（新格式）；兼容旧版目录内 manifest.json
     let meta = null;
-    try { meta = JSON.parse(await fsp.readFile(metaPath, 'utf8')); } catch (e) { meta = {}; }
+    try { meta = JSON.parse(await fsp.readFile(path.join(TRASH_DIR, name + '.meta.json'), 'utf8')); } catch (e) {
+      try { meta = JSON.parse(await fsp.readFile(path.join(dir, 'manifest.json'), 'utf8')); } catch (e2) { meta = {}; }
+    }
     items.push({
       name,
       original: meta.original || '',
@@ -412,13 +434,14 @@ async function trashList() {
   return items;
 }
 
+/** 移入回收站：目录移入 TRASH_DIR/<name>，元数据存同级 <name>.meta.json（不污染原目录内容） */
 async function moveToTrash(p, meta) {
   await fsp.mkdir(TRASH_DIR, { recursive: true });
   const base = path.basename(p);
   const name = `${Date.now()}-${base}`;
   const dest = path.join(TRASH_DIR, name);
   await fsp.rename(p, dest);
-  await fsp.writeFile(path.join(dest, 'manifest.json'), JSON.stringify({ ...meta, original: p }, null, 2));
+  await fsp.writeFile(path.join(TRASH_DIR, name + '.meta.json'), JSON.stringify({ ...meta, original: p }, null, 2));
   return name;
 }
 
@@ -429,11 +452,29 @@ async function trashRestore(names) {
     if (!isSafeTrashName(name)) { failed.push(`${name} (名称不合法)`); continue; }
     const dir = path.join(TRASH_DIR, name);
     let meta = {};
-    try { meta = JSON.parse(await fsp.readFile(path.join(dir, 'manifest.json'), 'utf8')); } catch (e) {}
-    if (!meta.original || !isSafeAppPath(meta.original)) { failed.push(`${name} (无原始路径记录)`); continue; }
+    try { meta = JSON.parse(await fsp.readFile(path.join(TRASH_DIR, name + '.meta.json'), 'utf8')); } catch (e) {
+      try { meta = JSON.parse(await fsp.readFile(path.join(dir, 'manifest.json'), 'utf8')); } catch (e2) {}
+    }
+    if (!meta.original || !isSafeRestorePath(meta.original)) { failed.push(`${name} (无原始路径记录)`); continue; }
     try {
       await fsp.mkdir(path.dirname(meta.original), { recursive: true });
-      await fsp.rename(dir, meta.original);
+      if (meta.kind === 'file') {
+        // tmp 单文件条目：目录内含原名文件，恢复文件后删除空目录（跨文件系统 EXDEV 复制+删除）
+        const base = path.basename(meta.original);
+        const src = path.join(dir, base);
+        try {
+          await fsp.rename(src, meta.original);
+        } catch (e) {
+          if (e.code !== 'EXDEV') throw e;
+          await fsp.copyFile(src, meta.original);
+          await fsp.unlink(src);
+        }
+        await fsp.rmdir(dir).catch(() => {});
+      } else {
+        await fsp.rename(dir, meta.original);
+      }
+      // 恢复成功：删除元数据文件
+      await fsp.unlink(path.join(TRASH_DIR, name + '.meta.json')).catch(() => {});
       restored.push({ name, original: meta.original });
     } catch (e) {
       failed.push(`${name} (${e.message})`);

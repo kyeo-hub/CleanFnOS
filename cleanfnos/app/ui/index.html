@@ -14,7 +14,12 @@
 
 <nav class="tabs">
   <button id="tab-scan" class="tab active" data-tab="scan">残留扫描</button>
+  <button id="tab-netdisk" class="tab" data-tab="netdisk">网盘残余</button>
+  <button id="tab-docker" class="tab" data-tab="docker">Docker</button>
+  <button id="tab-tmp" class="tab" data-tab="tmp">tmp 清理</button>
   <button id="tab-trash" class="tab" data-tab="trash">回收站 <span id="trash-count" class="count"></span></button>
+  <button id="tab-sys-trash" class="tab" data-tab="sys-trash">系统回收站</button>
+  <button id="tab-empty" class="tab" data-tab="empty">空目录</button>
 </nav>
 
 <main>
@@ -80,6 +85,124 @@
         <tbody></tbody>
       </table>
       <div id="no-trash" class="empty">🗑 回收站是空的</div>
+    </div>
+  </section>
+
+  <!-- ============ 网盘残余页 ============ -->
+  <section id="view-netdisk" class="view">
+    <div class="toolbar">
+      <button id="btn-netdisk-scan" class="primary">🔄 扫描网盘残余</button>
+      <span id="netdisk-status" class="status"></span>
+      <span class="spacer"></span>
+      <button id="btn-netdisk-delete" class="danger" disabled>🗑 清理选中项</button>
+    </div>
+    <div class="table-wrap">
+      <table id="tbl-netdisk">
+        <thead><tr><th><input type="checkbox" id="chk-all-netdisk"></th><th>挂载点 ID</th><th>路径</th><th>大小</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div id="no-netdisk" class="empty">✅ 未发现网盘挂载残余</div>
+    </div>
+  </section>
+
+  <!-- ============ Docker 页 ============ -->
+  <section id="view-docker" class="view">
+    <div class="toolbar">
+      <button id="btn-docker-scan" class="primary">🔄 扫描 Docker</button>
+      <span id="docker-status" class="status"></span>
+      <span class="spacer"></span>
+      <label><input type="checkbox" id="docker-buildcache"> 清理 Build Cache</label>
+      <button id="btn-docker-delete" class="danger" disabled>🗑 清理选中项</button>
+    </div>
+    <h2>已停止容器 <span class="hint">（可安全删除）</span></h2>
+    <div class="table-wrap">
+      <table id="tbl-docker-containers">
+        <thead><tr><th><input type="checkbox" id="chk-all-dc"></th><th>名称</th><th>状态</th><th>镜像</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div id="no-dc" class="empty">✅ 无已停止容器</div>
+    </div>
+    <h2>未用卷 <span class="hint">（未被任何容器引用）</span></h2>
+    <div class="table-wrap">
+      <table id="tbl-docker-volumes">
+        <thead><tr><th><input type="checkbox" id="chk-all-dv"></th><th>卷名</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div id="no-dv" class="empty">✅ 无未用卷</div>
+    </div>
+    <h2>未用自定义网络</h2>
+    <div class="table-wrap">
+      <table id="tbl-docker-networks">
+        <thead><tr><th><input type="checkbox" id="chk-all-dn"></th><th>名称</th><th>驱动</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div id="no-dn" class="empty">✅ 无未用自定义网络</div>
+    </div>
+    <h2>Dangling 镜像 <span class="hint">（无标签悬空镜像）</span></h2>
+    <div class="table-wrap">
+      <table id="tbl-docker-images">
+        <thead><tr><th><input type="checkbox" id="chk-all-di"></th><th>镜像 ID</th><th>大小</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div id="no-di" class="empty">✅ 无 dangling 镜像</div>
+    </div>
+  </section>
+
+  <!-- ============ tmp 清理页 ============ -->
+  <section id="view-tmp" class="view">
+    <div class="toolbar">
+      <button id="btn-tmp-scan" class="primary">🔄 扫描 tmp</button>
+      <span id="tmp-status" class="status"></span>
+      <span class="spacer"></span>
+      <button id="btn-tmp-delete" class="danger" disabled>🗑 清理选中项</button>
+    </div>
+    <p class="hint">扫描 /tmp 与 /var/tmp 下 24h+ 未访问的普通文件（跳过符号链接与系统关键目录）。</p>
+    <div class="table-wrap">
+      <table id="tbl-tmp">
+        <thead><tr><th><input type="checkbox" id="chk-all-tmp"></th><th>文件路径</th><th>大小</th><th>最后访问</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div id="no-tmp" class="empty">✅ 无 24h+ 未访问的 tmp 文件</div>
+    </div>
+  </section>
+
+  <!-- ============ 系统回收站页 ============ -->
+  <section id="view-sys-trash" class="view">
+    <div class="toolbar">
+      <button id="btn-sys-trash-scan" class="primary">🔄 扫描系统回收站</button>
+      <span id="sys-trash-status" class="status"></span>
+      <span class="spacer"></span>
+      <button id="btn-sys-trash-delete" class="danger" disabled>🗑 永久清理选中项</button>
+    </div>
+    <div class="stats">
+      <div id="sys-trash-summary" class="stat"><b>-</b><span>分级汇总</span></div>
+    </div>
+    <p class="hint">扫描所有存储卷 × 用户目录下的 <code>.@#local/trash/</code>，按删除时间 30/90/365 天分级。清理即永久删除（回收站内容无需再进回收站）。</p>
+    <div class="table-wrap">
+      <table id="tbl-sys-trash">
+        <thead><tr><th><input type="checkbox" id="chk-all-sys-trash"></th><th>路径</th><th>卷</th><th>大小</th><th>删除时间</th><th>分级</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div id="no-sys-trash" class="empty">✅ 系统回收站是空的</div>
+    </div>
+  </section>
+
+  <!-- ============ 空目录页 ============ -->
+  <section id="view-empty" class="view">
+    <div class="toolbar">
+      <input id="empty-root" value="/vol1" placeholder="扫描根目录（如 /vol1）" style="width:180px;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--panel2);color:var(--text)">
+      <button id="btn-empty-scan" class="primary">🔄 扫描空目录</button>
+      <span id="empty-status" class="status"></span>
+      <span class="spacer"></span>
+      <button id="btn-empty-delete" class="danger" disabled>🗑 清理选中项</button>
+    </div>
+    <p class="hint">扫描指定根目录下的完全空目录（跳过 @app* 系统目录、.@#local 回收站、符号链接与挂载点）。</p>
+    <div class="table-wrap">
+      <table id="tbl-empty">
+        <thead><tr><th><input type="checkbox" id="chk-all-empty"></th><th>目录路径</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div id="no-empty" class="empty">✅ 未发现空目录</div>
     </div>
   </section>
 </main>
