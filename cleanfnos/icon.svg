@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- 背景圆角方块（品牌深蓝） -->
+  <rect x="8" y="8" width="240" height="240" rx="48" fill="#0f172a"/>
+  <!-- 垃圾桶主体 -->
+  <rect x="66" y="78" width="124" height="132" rx="14" fill="#e2e8f0"/>
+  <rect x="56" y="60" width="144" height="26" rx="8" fill="#38bdf8"/>
+  <rect x="92" y="50" width="72" height="18" rx="6" fill="#38bdf8"/>
+  <!-- 垃圾桶条纹 -->
+  <rect x="66" y="110" width="124" height="12" rx="6" fill="#94a3b8"/>
+  <rect x="66" y="136" width="124" height="12" rx="6" fill="#94a3b8"/>
+  <!-- 清除符号（对勾） -->
+  <path d="M96 168 l22 22 l44 -52" fill="none" stroke="#22c55e" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

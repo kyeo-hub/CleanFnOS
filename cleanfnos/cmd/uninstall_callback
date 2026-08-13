@@ -1,0 +1,47 @@
+#!/bin/bash
+
+### This script is called after the user uninstalls the application.
+### CleanFnOS 卸载自我清理：停止服务 + 删除自身数据/配置/临时目录/链接，
+### 不留下任何残留（工具自己不双标，参考 fnos-app-cleaner 的自我清理）。
+
+set -euo pipefail
+
+log_msg() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> "${TRIM_TEMP_LOGFILE:-/dev/null}" 2>/dev/null || true
+}
+
+# 1. 停止自身服务（优先 pid 文件，兜底 pkill 按命令行特征匹配）
+PID_FILE="${TRIM_PKGVAR:-/tmp}/app.pid"
+if [ -r "${PID_FILE}" ]; then
+    pid=$(head -n 1 "${PID_FILE}" | tr -d '[:space:]')
+    if [ -n "${pid}" ] && kill -0 "${pid}" 2>/dev/null; then
+        log_msg "stopping pid=${pid}"
+        kill -TERM "${pid}" 2>/dev/null || true
+        sleep 1
+        kill -KILL "${pid}" 2>/dev/null || true
+    fi
+    rm -f "${PID_FILE}" 2>/dev/null || true
+fi
+pkill -f "cleanfnos/ui/server\\.js" 2>/dev/null || true
+
+# 2. 删除自身数据目录（回收站 / manifests / 日志 / pid）
+[ -n "${TRIM_PKGVAR:-}" ] && rm -rf "${TRIM_PKGVAR}" 2>/dev/null || true
+
+# 3. 删除自身配置目录
+[ -n "${TRIM_PKGETC:-}" ] && rm -rf "${TRIM_PKGETC}" 2>/dev/null || true
+
+# 4. 删除自身 home / temp / meta 目录
+[ -n "${TRIM_PKGHOME:-}" ] && rm -rf "${TRIM_PKGHOME}" 2>/dev/null || true
+[ -n "${TRIM_PKGTMP:-}" ] && rm -rf "${TRIM_PKGTMP}" 2>/dev/null || true
+[ -n "${TRIM_PKGMETA:-}" ] && rm -rf "${TRIM_PKGMETA}" 2>/dev/null || true
+
+# 5. 删除指向自身的 /usr/local 链接
+for l in /usr/local/bin/cleanfnos* /usr/local/sbin/cleanfnos* /opt/cleanfnos*; do
+    if [ -L "${l}" ]; then
+        rm -f "${l}" 2>/dev/null || true
+        log_msg "removed link ${l}"
+    fi
+done
+
+log_msg "CleanFnOS self-cleanup done"
+exit 0

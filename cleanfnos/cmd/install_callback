@@ -1,0 +1,26 @@
+#!/bin/bash
+
+### This script is called after the user installs the application.
+### 持久化向导端口与访问令牌到配置目录，供 cmd/main 与 server.js 读取。
+
+set -euo pipefail
+
+log_msg() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> "${TRIM_PKGVAR:-/tmp}/info.log"
+}
+
+mkdir -p "${TRIM_PKGETC}"
+
+PORT="${wizard_app_port:-47939}"
+printf 'wizard_app_port=%s\n' "${PORT}" > "${TRIM_PKGETC}/config.conf"
+log_msg "persisted wizard_app_port=${PORT}"
+
+# 访问令牌：向导填写则使用，留空则自动生成 32 位十六进制
+TOKEN="${wizard_token:-}"
+if [ -z "${TOKEN}" ]; then
+    TOKEN="$(head -c 16 /dev/urandom | od -An -tx1 | tr -d ' \n')"
+fi
+printf 'auth_token=%s\n' "${TOKEN}" >> "${TRIM_PKGETC}/config.conf"
+log_msg "persisted auth_token=${TOKEN}"
+
+exit 0

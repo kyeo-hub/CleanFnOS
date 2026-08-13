@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CleanFnOS 残留清理</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header>
+  <h1>🧹 CleanFnOS 残留清理</h1>
+  <span id="version" class="badge">v-</span>
+</header>
+
+<nav class="tabs">
+  <button id="tab-scan" class="tab active" data-tab="scan">残留扫描</button>
+  <button id="tab-trash" class="tab" data-tab="trash">回收站 <span id="trash-count" class="count"></span></button>
+</nav>
+
+<main>
+  <!-- ============ 扫描页 ============ -->
+  <section id="view-scan" class="view active">
+    <div class="toolbar">
+      <button id="btn-scan" class="primary">🔄 开始扫描</button>
+      <span id="scan-status" class="status"></span>
+      <span class="spacer"></span>
+      <select id="del-mode" title="删除方式">
+        <option value="trash">移入回收站（可恢复）</option>
+        <option value="permanent">永久删除（不可恢复）</option>
+      </select>
+      <button id="btn-delete" class="danger" disabled>🗑 清理选中项</button>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><b id="stat-apps">-</b><span>已安装应用</span></div>
+      <div class="stat"><b id="stat-orphans">-</b><span>残留应用</span></div>
+      <div class="stat"><b id="stat-size">-</b><span>占用空间</span></div>
+      <div class="stat"><b id="stat-links">-</b><span>链接残留</span></div>
+      <div class="stat"><b id="stat-users">-</b><span>残留用户</span></div>
+    </div>
+
+    <h2>残留目录 <span class="hint">（按应用聚合，@appshare 按符号链接归属识别，杜绝误报）</span></h2>
+    <div class="table-wrap">
+      <table id="tbl-orphans">
+        <thead><tr><th><input type="checkbox" id="chk-all"></th><th>应用</th><th>残留位置</th><th>大小</th><th>风险</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div id="no-orphans" class="empty">✅ 未发现残留目录</div>
+    </div>
+
+    <h2>链接残留 <span class="hint">（/usr/local 等目录下指向已卸载应用的符号链接）</span></h2>
+    <div class="table-wrap">
+      <table id="tbl-links">
+        <thead><tr><th><input type="checkbox" id="chk-all-links"></th><th>链接路径</th><th>指向</th><th>对应应用</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div id="no-links" class="empty">✅ 未发现链接残留</div>
+    </div>
+
+    <h2>残留系统用户 <span class="hint">（docker- 前缀且对应应用已卸载）</span></h2>
+    <div class="table-wrap">
+      <table id="tbl-users">
+        <thead><tr><th><input type="checkbox" id="chk-all-users"></th><th>用户名</th><th>对应应用</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div id="no-users" class="empty">✅ 未发现残留用户</div>
+    </div>
+  </section>
+
+  <!-- ============ 回收站页 ============ -->
+  <section id="view-trash" class="view">
+    <div class="toolbar">
+      <button id="btn-trash-refresh" class="primary">🔄 刷新</button>
+      <button id="btn-trash-restore" class="ok" disabled>↩ 恢复选中项</button>
+      <button id="btn-trash-empty" class="danger" disabled>💥 清空回收站</button>
+    </div>
+    <div class="table-wrap">
+      <table id="tbl-trash">
+        <thead><tr><th><input type="checkbox" id="chk-all-trash"></th><th>原始路径</th><th>类型</th><th>大小</th><th>移入时间</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div id="no-trash" class="empty">🗑 回收站是空的</div>
+    </div>
+  </section>
+</main>
+
+<div id="toast" class="toast"></div>
+<div id="modal" class="modal hidden">
+  <div class="modal-box">
+    <h3 id="modal-title">确认操作</h3>
+    <p id="modal-text"></p>
+    <div class="modal-actions">
+      <button id="modal-cancel" class="plain">取消</button>
+      <button id="modal-ok" class="danger">确认</button>
+    </div>
+  </div>
+</div>
+
+<script src="main.js"></script>
+</body>
+</html>

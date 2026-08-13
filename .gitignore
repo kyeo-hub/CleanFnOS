@@ -1,0 +1,7 @@
+# 第三方参考工具（不纳入本仓库）：fnclearup.fpk 及其 GitHub API 元数据
+fnclearup.fpk
+fpk.json
+
+# 本地运行产物
+var/
+*.log
