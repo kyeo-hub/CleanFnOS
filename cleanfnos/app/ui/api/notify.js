@@ -145,11 +145,14 @@ async function sendFeishu(cfg, title, content) {
   return { ok: true, message: '飞书发送成功' };
 }
 
-/** 企业微信：群机器人 webhook + key，text 消息 */
+/** 企业微信：群机器人 webhook + key，text 消息。key 字段兼容纯 key 或完整 webhook URL */
 async function sendWechat(cfg, title, content) {
   const key = (cfg && cfg.key || '').trim();
   if (!key) return { ok: false, message: '企业微信 webhook key 未配置' };
-  const url = `https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=${encodeURIComponent(key)}`;
+  // 兼容两种输入：完整 webhook URL 直接使用；纯 key 则拼接
+  const url = /^https?:\/\//.test(key)
+    ? key
+    : `https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=${encodeURIComponent(key)}`;
   const r = await httpPostJson(url, {
     msgtype: 'text',
     text: { content: `${title}\n${content}`.slice(0, 4000) },
