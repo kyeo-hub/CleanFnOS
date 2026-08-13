@@ -15,10 +15,21 @@ const state = {
   bigfiles: [],  // 大文件 { path, name, size, sizeText, mtimeText }
   sysclean: [],  // 系统清理项 { id, label, path, size, sizeText, risk, riskLabel, recommended }
   scheduleLoaded: false, // 定时清理配置是否已加载
+  kvmVms: [],    // KVM 虚拟机 { name, state, disks }
+  kvmGhosts: [], // 鬼影快照 { vm, vmState, disk, id, tag, size, sizeText, date }
 };
 
 const TOKEN_KEY = 'cleanfnos_token';
+const THEME_KEY = 'cleanfnos_theme';
 let apiToken = localStorage.getItem(TOKEN_KEY) || '';
+
+/* ---------- 明暗主题 ---------- */
+function applyTheme(theme) {
+  document.body.classList.toggle('light', theme === 'light');
+  localStorage.setItem(THEME_KEY, theme);
+  $('btn-theme').textContent = theme === 'light' ? '🌙 暗色' : '🌓 亮色';
+}
+applyTheme(localStorage.getItem(THEME_KEY) === 'light' ? 'light' : 'dark');
 
 const $ = (id) => document.getElementById(id);
 
@@ -965,6 +976,104 @@ async function loadSchedReports() {
   } catch (e) { /* 报告加载失败静默 */ }
 }
 
+/* ---------- KVM ---------- */
+async function scanKvm() {
+  $('kvm-status').textContent = '扫描中…';
+  $('btn-kvm-scan').disabled = true;
+  try {
+    const j = await api('/kvm/scan', {});
+    state.kvmVms = j.vms || [];
+    state.kvmGhosts = j.ghostSnapshots || [];
+    renderKvm();
+    $('kvm-status').textContent = `✓ ${state.kvmVms.length} 个 VM，${state.kvmGhosts.length} 个鬼影快照`;
+    toast('KVM 扫描完成');
+  } catch (e) {
+    $('kvm-status').textContent = '✗ 扫描失败';
+    toast('扫描失败: ' + e.message, false);
+  } finally {
+    $('btn-kvm-scan').disabled = false;
+    syncKvmBtn();
+  }
+}
+
+function renderKvm() {
+  // VM 列表
+  const vtb = $('tbl-kvm-vms').querySelector('tbody');
+  vtb.innerHTML = '';
+  $('no-kvm-vms').style.display = state.kvmVms.length ? 'none' : 'block';
+  $('tbl-kvm-vms').style.display = state.kvmVms.length ? '' : 'none';
+  for (const vm of state.kvmVms) {
+    const tr = document.createElement('tr');
+    const running = /running/i.test(vm.state || '');
+    tr.innerHTML = `<td><b>${esc(vm.name)}</b></td>
+      <td><span class="risk ${running ? 'risk-low' : 'risk-med'}">${esc(vm.state)}</span></td>
+      <td><code class="sz">${esc((vm.disks || []).join('<br>') || '-')}</code></td>
+      <td>
+        ${!running ? `<button class="plain vm-act" data-act="start">▶ 启动</button>` : ''}
+        ${running ? `<button class="plain vm-act" data-act="shutdown">⏹ 关机</button>` : ''}
+        ${running ? `<button class="danger vm-act" data-act="destroy">⛔ 强关</button>` : ''}
+      </td>`;
+    vtb.appendChild(tr);
+    tr.querySelectorAll('.vm-act').forEach((b) => {
+      b.addEventListener('click', () => vmAction(vm.name, b.dataset.act));
+    });
+  }
+
+  // 鬼影快照
+  const gtb = $('tbl-kvm-ghosts').querySelector('tbody');
+  gtb.innerHTML = '';
+  $('no-kvm-ghosts').style.display = state.kvmGhosts.length ? 'none' : 'block';
+  $('tbl-kvm-ghosts').style.display = state.kvmGhosts.length ? '' : 'none';
+  $('chk-all-kvm').checked = false;
+  for (const g of state.kvmGhosts) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td><input type="checkbox" class="ck-kvm"></td>
+      <td>${esc(g.vm)}</td><td><code>${esc(g.tag)}</code></td>
+      <td><b>${esc(g.sizeText)}</b></td><td>${esc(g.date)}</td>`;
+    gtb.appendChild(tr);
+    const ck = tr.querySelector('.ck-kvm');
+    ck._snap = { vm: g.vm, disk: g.disk, tag: g.tag };
+    ck.addEventListener('change', syncKvmBtn);
+  }
+  syncKvmBtn();
+}
+
+async function vmAction(vm, action) {
+  const labels = { start: '启动', shutdown: '关机', destroy: '强制关机' };
+  confirmDialog(`VM ${labels[action]}确认`, `将${labels[action]}虚拟机 <b>${esc(vm)}</b>。确定继续吗？`, labels[action], async () => {
+    try {
+      const j = await api('/kvm/vm', { vm, action });
+      toast(j.success ? `${labels[action]}成功` : `${labels[action]}失败: ${j.error || ''}`, !!j.success);
+      await scanKvm();
+    } catch (e) { toast('操作失败: ' + e.message, false); }
+  });
+}
+
+function selectedKvmGhosts() {
+  return [...document.querySelectorAll('#tbl-kvm-ghosts tbody .ck-kvm:checked')].map((ck) => ck._snap);
+}
+function syncKvmBtn() {
+  const n = selectedKvmGhosts().length;
+  $('btn-kvm-delete').disabled = n === 0;
+  $('btn-kvm-delete').textContent = n ? `🗑 删除选中鬼影快照（${n}）` : '🗑 删除选中鬼影快照';
+}
+$('chk-all-kvm').addEventListener('change', (e) => {
+  document.querySelectorAll('#tbl-kvm-ghosts tbody .ck-kvm').forEach((ck) => { ck.checked = e.target.checked; });
+  syncKvmBtn();
+});
+$('btn-kvm-delete').addEventListener('click', () => {
+  const snaps = selectedKvmGhosts();
+  if (!snaps.length) return;
+  confirmDialog('⚠️ 鬼影快照删除确认', `将删除 <b>${snaps.length}</b> 个鬼影快照（运行中的 VM 会自动关停，删除后恢复）。<br><br><b style="color:#d33">删除不可恢复！</b> 确定继续吗？`, '永久删除', async () => {
+    try {
+      const j = await api('/kvm/delete', { snapshots: snaps });
+      toast(`完成：${(j.removed || []).length} 个成功${(j.failed || []).length ? `，${j.failed.length} 个失败` : ''}`);
+      if (j.failed && j.failed.length) toast('失败项: ' + j.failed.join('；'), false);
+      await scanKvm();
+    } catch (e) { toast('删除失败: ' + e.message, false); }
+  });
+});
+
 /* ---------- Tab 切换 ---------- */
 document.querySelectorAll('.tab').forEach((b) => {
   b.addEventListener('click', () => {
@@ -983,6 +1092,7 @@ document.querySelectorAll('.tab').forEach((b) => {
     else if (tab === 'bigfiles' && !state.bigfiles.length) scanBigfiles();
     else if (tab === 'sysclean' && !state.sysclean.length) scanSysclean();
     else if (tab === 'schedule' && !state.scheduleLoaded) loadSchedule();
+    else if (tab === 'kvm' && !state.kvmVms.length) scanKvm();
   });
 });
 
@@ -1005,5 +1115,9 @@ document.querySelectorAll('.tab').forEach((b) => {
   $('btn-schedule-load').addEventListener('click', loadSchedule);
   $('btn-schedule-save').addEventListener('click', saveSchedule);
   $('btn-schedule-run').addEventListener('click', runScheduleNow);
+  $('btn-kvm-scan').addEventListener('click', scanKvm);
+  $('btn-theme').addEventListener('click', () => {
+    applyTheme(document.body.classList.contains('light') ? 'dark' : 'light');
+  });
   doScan();
 })();

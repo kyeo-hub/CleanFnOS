@@ -20,7 +20,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 const PORT = parseInt(process.env.PORT || '47939', 10);
-const VERSION = '1.3.0';
+const VERSION = '1.4.0';
 
 // 数据目录（cmd/main 注入 TRIM_PKGVAR；未注入时退化到本地 var）
 const VAR_DIR = process.env.TRIM_PKGVAR || path.join(__dirname, '..', '..', 'var');
@@ -36,6 +36,7 @@ const dupApi = require('./api/dup.js');
 const bigfilesApi = require('./api/bigfiles.js');
 const syscleanApi = require('./api/sysclean.js');
 const scheduleApi = require('./api/schedule.js');
+const kvmApi = require('./api/kvm.js');
 
 // ---------------- token 鉴权 ----------------
 const CONFIG_FILE = process.env.TRIM_PKGETC ? path.join(process.env.TRIM_PKGETC, 'config.conf') : null;
@@ -373,6 +374,33 @@ const server = http.createServer(async (req, res) => {
       const r = scheduleApi.getReport(name);
       if (!r) { sendJSON(res, 404, { success: false, error: 'report not found' }); return; }
       sendJSON(res, 200, { success: true, report: r });
+      return;
+    }
+
+    // ---- M4 模块路由 ----
+
+    // POST /api/kvm/scan
+    if (method === 'POST' && p === '/api/kvm/scan') {
+      const r = await kvmApi.scanKvm();
+      sendJSON(res, 200, { success: true, ...r });
+      return;
+    }
+
+    // POST /api/kvm/delete（删除鬼影快照）
+    if (method === 'POST' && p === '/api/kvm/delete') {
+      const body = await readBody(req);
+      const r = await kvmApi.deleteGhostSnapshots({
+        snapshots: Array.isArray(body.snapshots) ? body.snapshots : [],
+      });
+      sendJSON(res, 200, { success: r.failed.length === 0, removed: r.removed, failed: r.failed });
+      return;
+    }
+
+    // POST /api/kvm/vm（VM 启停管理）
+    if (method === 'POST' && p === '/api/kvm/vm') {
+      const body = await readBody(req);
+      const r = await kvmApi.vmAction({ vm: body.vm, action: body.action });
+      sendJSON(res, 200, r);
       return;
     }
 

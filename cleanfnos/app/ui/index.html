@@ -10,6 +10,7 @@
 <header>
   <h1>🧹 CleanFnOS 残留清理</h1>
   <span id="version" class="badge">v-</span>
+  <button id="btn-theme" class="plain" style="margin-left:auto" title="切换明暗主题">🌓 主题</button>
 </header>
 
 <nav class="tabs">
@@ -24,6 +25,7 @@
   <button id="tab-bigfiles" class="tab" data-tab="bigfiles">大文件</button>
   <button id="tab-sysclean" class="tab" data-tab="sysclean">系统清理</button>
   <button id="tab-schedule" class="tab" data-tab="schedule">定时清理</button>
+  <button id="tab-kvm" class="tab" data-tab="kvm">KVM</button>
 </nav>
 
 <main>
@@ -300,6 +302,33 @@
       </table>
       <div id="no-sched-reports" class="empty">暂无清理报告</div>
     </div>
+  </section>
+
+  <!-- ============ KVM 页 ============ -->
+  <section id="view-kvm" class="view">
+    <div class="toolbar">
+      <button id="btn-kvm-scan" class="primary">🔄 扫描 KVM</button>
+      <span id="kvm-status" class="status"></span>
+      <span class="spacer"></span>
+      <button id="btn-kvm-delete" class="danger" disabled>🗑 删除选中鬼影快照</button>
+    </div>
+    <h2>虚拟机列表</h2>
+    <div class="table-wrap">
+      <table id="tbl-kvm-vms">
+        <thead><tr><th>名称</th><th>状态</th><th>磁盘</th><th>操作</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div id="no-kvm-vms" class="empty">ℹ️ 未发现 KVM 虚拟机</div>
+    </div>
+    <h2>鬼影快照 <span class="hint">（virsh 不可见但 qcow2 实际占用空间）</span></h2>
+    <div class="table-wrap">
+      <table id="tbl-kvm-ghosts">
+        <thead><tr><th><input type="checkbox" id="chk-all-kvm"></th><th>所属 VM</th><th>快照名</th><th>大小</th><th>创建时间</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div id="no-kvm-ghosts" class="empty">✅ 未发现鬼影快照</div>
+    </div>
+    <p class="hint">鬼影快照删除时会自动关停运行中的 VM，删除后恢复原状态（参考 fnos-app-cleaner）。</p>
   </section>
 </main>
 
