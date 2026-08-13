@@ -51,10 +51,10 @@ const SYSTEM_TARGETS = [
     filter: (n) => n.endsWith('.deb') },
   { id: 'apt-lists', label: 'APT 列表缓存', path: '/var/lib/apt/lists', risk: 'low',
     filter: (n) => !n.startsWith('partial') && !n.endsWith('.gpg') },
-  { id: 'syslog-gz', label: '系统日志轮转 (.gz)', path: '/var/log', risk: 'low',
-    filter: (n) => n.endsWith('.gz') },
-  { id: 'syslog-old', label: '系统日志历史档 (.1)', path: '/var/log', risk: 'low',
-    filter: (n) => /\.1$/.test(n) && /^(syslog|auth\.log|mail\.log|kern\.log|daemon\.log|user\.log|messages)/.test(n) },
+  { id: 'syslog-gz', label: '系统日志轮转 (.gz)', path: '/var/log', risk: 'low', fileChildren: true,
+    filter: (n) => /\.gz$/.test(n) && /^(syslog|auth\.log|mail\.log|kern\.log|daemon\.log|user\.log|messages|dpkg\.log)/.test(n) },
+  { id: 'syslog-old', label: '系统日志历史档 (.1)', path: '/var/log', risk: 'low', fileChildren: true,
+    filter: (n) => /\.1$/.test(n) && /^(syslog|auth\.log|mail\.log|kern\.log|daemon\.log|user\.log|messages|dpkg\.log)/.test(n) },
   { id: 'journal', label: 'systemd journal 日志', path: '/var/log/journal', risk: 'low',
     filter: (n) => n.endsWith('.journal') },
   { id: 'app-logs', label: '应用日志 (>50MB)', path: '/vol*', risk: 'medium', dynamicChildren: true },
@@ -114,7 +114,7 @@ function isSafeCleanPath(p) {
     '/var/cache/apt/archives', '/var/lib/apt/lists', '/var/log/journal',
   ];
   if (sysPrefixes.some((pre) => p === pre || p.startsWith(pre + '/'))) return true;
-  if (/^\/var\/log\/(syslog|auth\.log|mail\.log|kern\.log|daemon\.log|user\.log|messages)/.test(p)) return true;
+  if (/^\/var\/log\/(syslog|auth\.log|mail\.log|kern\.log|daemon\.log|user\.log|messages|dpkg\.log)/.test(p)) return true;
   // 用户缓存：/volN/<UID>/.cache 或 /.npm 下
   if (/^\/vol\d+\/\d+\/(\.cache|\.npm)(\/|$)/.test(p)) return true;
   // 应用日志：/volN/@appcenter/<app>/logs 下
@@ -159,6 +159,24 @@ function scanSysClean() {
       continue;
     }
     if (!fs.existsSync(t.path)) continue;
+    if (t.fileChildren) {
+      // 按文件展开：/var/log 下匹配 filter 的具体轮转文件（逐个删除，不清空目录）
+      let names = [];
+      try { names = fs.readdirSync(t.path); } catch (e) { continue; }
+      for (const n of names) {
+        if (t.filter && !t.filter(n)) continue;
+        const fp = path.join(t.path, n);
+        let st;
+        try { st = fs.lstatSync(fp); } catch (e) { continue; }
+        if (!st.isFile()) continue;
+        items.push({
+          id: `${t.id}:${n}`, label: `${t.label} (${n})`, path: fp,
+          size: st.size, sizeText: fmtSize(st.size), risk: t.risk, riskLabel: RISK_LABEL[t.risk],
+          recommended: RECOMMENDED_BASE.has(t.id),
+        });
+      }
+      continue;
+    }
     const size = dirSize(t.path, t.filter);
     items.push({
       id: t.id, label: t.label, path: t.path,
