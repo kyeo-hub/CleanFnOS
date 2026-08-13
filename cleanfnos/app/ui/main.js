@@ -24,6 +24,8 @@ const TOKEN_KEY = 'cleanfnos_token';
 const THEME_KEY = 'cleanfnos_theme';
 let apiToken = localStorage.getItem(TOKEN_KEY) || '';
 
+const $ = (id) => document.getElementById(id);
+
 /* ---------- 明暗主题 ---------- */
 function applyTheme(theme) {
   document.body.classList.toggle('light', theme === 'light');
@@ -31,8 +33,6 @@ function applyTheme(theme) {
   $('btn-theme').textContent = theme === 'light' ? '🌙 暗色' : '🌓 亮色';
 }
 applyTheme(localStorage.getItem(THEME_KEY) === 'light' ? 'light' : 'dark');
-
-const $ = (id) => document.getElementById(id);
 
 /* ---------- 工具 ---------- */
 function toast(msg, ok = true) {
