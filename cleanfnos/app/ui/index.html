@@ -20,6 +20,10 @@
   <button id="tab-trash" class="tab" data-tab="trash">回收站 <span id="trash-count" class="count"></span></button>
   <button id="tab-sys-trash" class="tab" data-tab="sys-trash">系统回收站</button>
   <button id="tab-empty" class="tab" data-tab="empty">空目录</button>
+  <button id="tab-dup" class="tab" data-tab="dup">去重</button>
+  <button id="tab-bigfiles" class="tab" data-tab="bigfiles">大文件</button>
+  <button id="tab-sysclean" class="tab" data-tab="sysclean">系统清理</button>
+  <button id="tab-schedule" class="tab" data-tab="schedule">定时清理</button>
 </nav>
 
 <main>
@@ -203,6 +207,98 @@
         <tbody></tbody>
       </table>
       <div id="no-empty" class="empty">✅ 未发现空目录</div>
+    </div>
+  </section>
+
+  <!-- ============ 去重页 ============ -->
+  <section id="view-dup" class="view">
+    <div class="toolbar">
+      <select id="dup-type" title="扫描类型">
+        <option value="files">文件去重（全部）</option>
+        <option value="music">音乐去重（音频元数据）</option>
+      </select>
+      <input id="dup-path" value="/vol1/1000" placeholder="扫描目录（可多个用逗号分隔）" style="width:260px;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--panel2);color:var(--text)">
+      <button id="btn-dup-scan" class="primary">🔄 扫描重复</button>
+      <span id="dup-status" class="status"></span>
+      <span class="spacer"></span>
+      <button id="btn-dup-delete" class="danger" disabled>🗑 删除选中副本</button>
+    </div>
+    <p class="hint">按文件大小分组后对同大小文件做 SHA-256 流式哈希，识别重复文件。删除默认移入回收站（每个重复组保留第一个）。</p>
+    <div id="dup-stats" class="stats" style="display:none">
+      <div class="stat"><b id="dup-stat-files">-</b><span>扫描文件</span></div>
+      <div class="stat"><b id="dup-stat-groups">-</b><span>重复组</span></div>
+      <div class="stat"><b id="dup-stat-dup">-</b><span>重复文件</span></div>
+      <div class="stat"><b id="dup-stat-wasted">-</b><span>可回收空间</span></div>
+    </div>
+    <div id="dup-groups-wrap"></div>
+    <div id="no-dup" class="empty">🔍 输入扫描目录后点击「扫描重复」</div>
+  </section>
+
+  <!-- ============ 大文件页 ============ -->
+  <section id="view-bigfiles" class="view">
+    <div class="toolbar">
+      <input id="bigfiles-path" value="/vol*" placeholder="扫描根（/vol* 或 /volN）" style="width:160px;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--panel2);color:var(--text)">
+      <button id="btn-bigfiles-scan" class="primary">🔄 扫描大文件</button>
+      <span id="bigfiles-status" class="status"></span>
+    </div>
+    <p class="hint">跨卷扫描 ≥100MB 的大文件 Top100（默认排除 /vol02 网盘 fuse 挂载）。</p>
+    <div class="table-wrap">
+      <table id="tbl-bigfiles">
+        <thead><tr><th>文件名</th><th>大小</th><th>修改时间</th><th>路径</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div id="no-bigfiles" class="empty">🔍 点击「扫描大文件」开始</div>
+    </div>
+  </section>
+
+  <!-- ============ 系统清理页 ============ -->
+  <section id="view-sysclean" class="view">
+    <div class="toolbar">
+      <button id="btn-sysclean-scan" class="primary">🔄 扫描系统清理项</button>
+      <span id="sysclean-status" class="status"></span>
+      <span class="spacer"></span>
+      <button id="btn-sysclean-recommended" class="ok">✅ 推荐清理</button>
+      <button id="btn-sysclean-delete" class="danger" disabled>🗑 清理选中项</button>
+    </div>
+    <p class="hint">apt/npm/pip/uv/浏览器缓存、系统日志、应用日志(>50MB) 等 17 项。低风险=可安全清理（自动重建）；清理为永久删除，操作前自动备份清单。</p>
+    <div class="table-wrap">
+      <table id="tbl-sysclean">
+        <thead><tr><th><input type="checkbox" id="chk-all-sysclean"></th><th>清理项</th><th>大小</th><th>风险</th><th>推荐</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div id="no-sysclean" class="empty">🔍 点击「扫描系统清理项」开始</div>
+    </div>
+  </section>
+
+  <!-- ============ 定时清理页 ============ -->
+  <section id="view-schedule" class="view">
+    <div class="toolbar">
+      <button id="btn-schedule-load" class="primary">🔄 加载配置</button>
+      <button id="btn-schedule-save" class="ok">💾 保存配置</button>
+      <button id="btn-schedule-run" class="danger">⚡ 立即执行一次</button>
+      <span id="schedule-status" class="status"></span>
+    </div>
+    <div class="schedule-form">
+      <label><input type="checkbox" id="sched-enabled"> 启用定时清理</label>
+      <label>间隔(小时) <input type="number" id="sched-interval" value="24" min="1" style="width:70px;padding:4px 6px;border-radius:6px;border:1px solid var(--border);background:var(--panel2);color:var(--text)"></label>
+      <label>每日首跑 <input type="number" id="sched-hour" value="3" min="0" max="23" style="width:60px;padding:4px 6px;border-radius:6px;border:1px solid var(--border);background:var(--panel2);color:var(--text)">时
+        <input type="number" id="sched-minute" value="0" min="0" max="59" style="width:60px;padding:4px 6px;border-radius:6px;border:1px solid var(--border);background:var(--panel2);color:var(--text)">分</label>
+      <div class="sched-types">
+        <label><input type="checkbox" class="sched-type" data-type="app"> 应用残余</label>
+        <label><input type="checkbox" class="sched-type" data-type="netdisk"> 网盘残余</label>
+        <label><input type="checkbox" class="sched-type" data-type="docker"> Docker</label>
+        <label><input type="checkbox" class="sched-type" data-type="tmp"> tmp</label>
+        <label><input type="checkbox" class="sched-type" data-type="trash"> 系统回收站(30天+)</label>
+      </div>
+      <div id="sched-next" class="hint"></div>
+    </div>
+    <h2>清理报告</h2>
+    <div class="table-wrap">
+      <table id="tbl-sched-reports">
+        <thead><tr><th>执行时间</th><th>类型</th><th>结果</th><th>错误</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div id="no-sched-reports" class="empty">暂无清理报告</div>
     </div>
   </section>
 </main>

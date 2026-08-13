@@ -11,6 +11,10 @@ const state = {
   tmp: [],       // tmp 24h+ 文件 { path, size, sizeText, atimeText, risk }
   sysTrash: [],  // 系统回收站 { path, name, vol, uid, level, size, sizeText, mtimeText }
   emptyDirs: [], // 空目录 { path }
+  dupGroups: [], // 去重分组 { hash, count, wasted, wastedText, files:[] }
+  bigfiles: [],  // 大文件 { path, name, size, sizeText, mtimeText }
+  sysclean: [],  // 系统清理项 { id, label, path, size, sizeText, risk, riskLabel, recommended }
+  scheduleLoaded: false, // 定时清理配置是否已加载
 };
 
 const TOKEN_KEY = 'cleanfnos_token';
@@ -684,6 +688,283 @@ $('btn-empty-delete').addEventListener('click', () => {
   });
 });
 
+/* ---------- 去重 ---------- */
+async function scanDup() {
+  const type = $('dup-type').value;
+  const paths = ($('dup-path').value || '').split(',').map((s) => s.trim()).filter(Boolean);
+  if (!paths.length) { toast('请输入扫描目录', false); return; }
+  $('dup-status').textContent = '扫描中…（大目录可能耗时）';
+  $('btn-dup-scan').disabled = true;
+  try {
+    const j = await api('/dup/scan', { type, paths });
+    state.dupGroups = j.groups || [];
+    renderDup(j.stats || {});
+    $('dup-status').textContent = `✓ 扫描 ${(j.stats || {}).totalFiles || 0} 个文件，${state.dupGroups.length} 组重复`;
+    toast('去重扫描完成');
+  } catch (e) {
+    $('dup-status').textContent = '✗ 扫描失败';
+    toast('扫描失败: ' + e.message, false);
+  } finally {
+    $('btn-dup-scan').disabled = false;
+    syncDupBtn();
+  }
+}
+
+function renderDup(stats) {
+  $('dup-stats').style.display = 'block';
+  $('dup-stat-files').textContent = stats.totalFiles || 0;
+  $('dup-stat-groups').textContent = stats.duplicateGroups || 0;
+  $('dup-stat-dup').textContent = stats.duplicateFiles || 0;
+  $('dup-stat-wasted').textContent = stats.wastedText || '0 B';
+  const wrap = $('dup-groups-wrap');
+  wrap.innerHTML = '';
+  $('no-dup').style.display = state.dupGroups.length ? 'none' : 'block';
+  for (const g of state.dupGroups) {
+    const card = document.createElement('div');
+    card.className = 'dup-card';
+    card.innerHTML = `<div class="dup-head">
+        <b>重复组</b> ${g.count} 个文件 / 可回收 <span style="color:#4ade80">${esc(g.wastedText)}</span>
+        <span class="sz">${esc(g.hash.slice(0, 12))}…</span>
+        <button class="dup-select-all plain" style="float:right">全选副本</button>
+      </div>
+      <table class="dup-files"><tbody></tbody></table>`;
+    const tb = card.querySelector('tbody');
+    g.files.forEach((f, idx) => {
+      const tr = document.createElement('tr');
+      const keep = idx === 0; // 每组保留第一个
+      const id3 = f.id3 && (f.id3.title || f.id3.artist)
+        ? ` <span class="sz">[${esc(f.id3.artist || '')} - ${esc(f.id3.title || '')}${f.id3.album ? ' / ' + esc(f.id3.album) : ''}]</span>` : '';
+      tr.innerHTML = `<td><input type="checkbox" class="ck-dup" ${keep ? 'disabled' : ''}></td>
+        <td>${keep ? '<span class="risk risk-low">保留</span>' : ''} <code>${esc(f.path)}</code>${id3}</td>
+        <td class="sz">${esc(f.sizeText)}</td>`;
+      tb.appendChild(tr);
+      const ck = tr.querySelector('.ck-dup');
+      ck._path = f.path;
+      ck.addEventListener('change', syncDupBtn);
+    });
+    // 全选该组副本（跳过保留项）
+    card.querySelector('.dup-select-all').addEventListener('click', () => {
+      card.querySelectorAll('.ck-dup:not(:disabled)').forEach((ck) => { ck.checked = true; });
+      syncDupBtn();
+    });
+    wrap.appendChild(card);
+  }
+  syncDupBtn();
+}
+
+function selectedDup() {
+  return [...document.querySelectorAll('#dup-groups-wrap .ck-dup:checked')].map((ck) => ck._path);
+}
+function syncDupBtn() {
+  const n = selectedDup().length;
+  $('btn-dup-delete').disabled = n === 0;
+  $('btn-dup-delete').textContent = n ? `🗑 删除选中副本（${n}）` : '🗑 删除选中副本';
+}
+$('btn-dup-delete').addEventListener('click', () => {
+  const files = selectedDup();
+  if (!files.length) return;
+  confirmDialog('去重删除确认', `将删除 <b>${files.length}</b> 个重复文件副本（移入回收站可恢复，每个重复组保留第一个）。确定继续吗？`, '移入回收站', async () => {
+    try {
+      const j = await api('/dup/delete', { files, mode: 'trash' });
+      toast(`完成：${(j.moved || []).length} 项成功${(j.failed || []).length ? `，${j.failed.length} 项失败` : ''}`);
+      await scanDup();
+    } catch (e) { toast('删除失败: ' + e.message, false); }
+  });
+});
+
+/* ---------- 大文件 ---------- */
+async function scanBigfiles() {
+  const rootPath = ($('bigfiles-path').value || '/vol*').trim();
+  $('bigfiles-status').textContent = '扫描中…（跨卷可能耗时）';
+  $('btn-bigfiles-scan').disabled = true;
+  try {
+    const j = await api('/bigfiles/scan', { rootPath });
+    state.bigfiles = j.files || [];
+    renderBigfiles();
+    $('bigfiles-status').textContent = `✓ ${state.bigfiles.length} 个大文件${j.truncated ? `（已截断，共 ${j.totalCandidates || 0} 个候选）` : ''}，${(j.elapsedMs / 1000).toFixed(1)}s`;
+    toast('大文件扫描完成');
+  } catch (e) {
+    $('bigfiles-status').textContent = '✗ 扫描失败';
+    toast('扫描失败: ' + e.message, false);
+  } finally {
+    $('btn-bigfiles-scan').disabled = false;
+  }
+}
+
+function renderBigfiles() {
+  const tb = $('tbl-bigfiles').querySelector('tbody');
+  tb.innerHTML = '';
+  $('no-bigfiles').style.display = state.bigfiles.length ? 'none' : 'block';
+  $('tbl-bigfiles').style.display = state.bigfiles.length ? '' : 'none';
+  for (const f of state.bigfiles) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${esc(f.name)}</td><td><b>${esc(f.sizeText)}</b></td>
+      <td>${esc(f.mtimeText)}</td><td><code>${esc(f.path)}</code></td>`;
+    tb.appendChild(tr);
+  }
+}
+
+/* ---------- 系统清理 ---------- */
+async function scanSysclean() {
+  $('sysclean-status').textContent = '扫描中…';
+  $('btn-sysclean-scan').disabled = true;
+  try {
+    const j = await api('/sysclean/scan', {});
+    state.sysclean = j.items || [];
+    renderSysclean();
+    $('sysclean-status').textContent = `✓ ${state.sysclean.length} 项，可回收 ${fmtTotalSysclean()}`;
+    toast('系统清理扫描完成');
+  } catch (e) {
+    $('sysclean-status').textContent = '✗ 扫描失败';
+    toast('扫描失败: ' + e.message, false);
+  } finally {
+    $('btn-sysclean-scan').disabled = false;
+    syncSyscleanBtn();
+  }
+}
+
+function fmtTotalSysclean() {
+  const total = state.sysclean.reduce((s, i) => s + (i.size || 0), 0);
+  if (total >= 1024 ** 3) return (total / 1024 ** 3).toFixed(2) + ' GB';
+  if (total >= 1024 ** 2) return (total / 1024 ** 2).toFixed(2) + ' MB';
+  if (total >= 1024) return (total / 1024).toFixed(1) + ' KB';
+  return total + ' B';
+}
+
+function renderSysclean() {
+  const tb = $('tbl-sysclean').querySelector('tbody');
+  tb.innerHTML = '';
+  $('no-sysclean').style.display = state.sysclean.length ? 'none' : 'block';
+  $('tbl-sysclean').style.display = state.sysclean.length ? '' : 'none';
+  $('chk-all-sysclean').checked = false;
+  for (const it of state.sysclean) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td><input type="checkbox" class="ck-sysclean" data-path="${esc(it.path)}"></td>
+      <td>${esc(it.label)}<br><code class="sz">${esc(it.path)}</code></td>
+      <td>${esc(it.sizeText)}</td>
+      <td><span class="risk ${RISK_CLASS[it.risk] || ''}">${esc(it.riskLabel)}</span></td>
+      <td>${it.recommended ? '✅' : '-'}</td>`;
+    tb.appendChild(tr);
+    const ck = tr.querySelector('.ck-sysclean');
+    ck._path = it.path;
+    ck.addEventListener('change', syncSyscleanBtn);
+  }
+  syncSyscleanBtn();
+}
+
+function selectedSysclean() {
+  return [...document.querySelectorAll('#tbl-sysclean tbody .ck-sysclean:checked')].map((ck) => ck._path);
+}
+function syncSyscleanBtn() {
+  const n = selectedSysclean().length;
+  $('btn-sysclean-delete').disabled = n === 0;
+  $('btn-sysclean-delete').textContent = n ? `🗑 清理选中项（${n}）` : '🗑 清理选中项';
+}
+$('chk-all-sysclean').addEventListener('change', (e) => {
+  document.querySelectorAll('#tbl-sysclean tbody .ck-sysclean').forEach((ck) => { ck.checked = e.target.checked; });
+  syncSyscleanBtn();
+});
+$('btn-sysclean-recommended').addEventListener('click', () => {
+  document.querySelectorAll('#tbl-sysclean tbody .ck-sysclean').forEach((ck) => {
+    const item = state.sysclean.find((i) => i.path === ck._path);
+    ck.checked = !!(item && item.recommended);
+  });
+  syncSyscleanBtn();
+});
+$('btn-sysclean-delete').addEventListener('click', () => {
+  const paths = selectedSysclean();
+  if (!paths.length) return;
+  const hasHigh = paths.some((p) => {
+    const it = state.sysclean.find((i) => i.path === p);
+    return it && it.risk === 'high';
+  });
+  confirmDialog('⚠️ 系统清理确认',
+    `将<b style="color:#d33">永久删除</b> <b>${paths.length}</b> 项缓存/日志（不可恢复，缓存会按需重建）<br><br>` +
+    (hasHigh ? '<b style="color:#d33">⚠️ 包含高风险项（浏览器缓存/Playwright，会丢登录态或需重下载）！</b><br>' : '') +
+    '确定继续吗？', '永久清理', async () => {
+    try {
+      const j = await api('/sysclean/delete', { paths });
+      toast(`完成：${(j.cleaned || []).length} 项成功${(j.failed || []).length ? `，${j.failed.length} 项失败` : ''}，释放 ${j.totalBytes ? (j.totalBytes / 1024 / 1024).toFixed(1) + ' MB' : '0 B'}`);
+      await scanSysclean();
+    } catch (e) { toast('清理失败: ' + e.message, false); }
+  });
+});
+
+/* ---------- 定时清理 ---------- */
+async function loadSchedule() {
+  try {
+    const j = await api('/schedule');
+    const c = j.config || {};
+    $('sched-enabled').checked = !!c.enabled;
+    $('sched-interval').value = c.intervalHours || 24;
+    $('sched-hour').value = c.hour != null ? c.hour : 3;
+    $('sched-minute').value = c.minute != null ? c.minute : 0;
+    document.querySelectorAll('.sched-type').forEach((ck) => {
+      const t = (c.cleanupTypes || {})[ck.dataset.type] || {};
+      ck.checked = !!(t && t.enabled);
+    });
+    $('sched-next').textContent = c.nextRun ? `下次执行：${new Date(c.nextRun).toLocaleString('zh-CN')}（已执行 ${c.runCount || 0} 次）` : '定时清理未启用';
+    await loadSchedReports();
+    toast('定时清理配置已加载');
+  } catch (e) { toast('加载配置失败: ' + e.message, false); }
+}
+
+async function saveSchedule() {
+  const cleanupTypes = {};
+  document.querySelectorAll('.sched-type').forEach((ck) => {
+    cleanupTypes[ck.dataset.type] = { enabled: ck.checked };
+  });
+  try {
+    const j = await api('/schedule', {
+      enabled: $('sched-enabled').checked,
+      intervalHours: parseInt($('sched-interval').value, 10) || 24,
+      hour: parseInt($('sched-hour').value, 10) || 3,
+      minute: parseInt($('sched-minute').value, 10) || 0,
+      cleanupTypes,
+    });
+    const c = j.config || {};
+    $('sched-next').textContent = c.nextRun ? `下次执行：${new Date(c.nextRun).toLocaleString('zh-CN')}` : '定时清理未启用';
+    toast('配置已保存');
+  } catch (e) { toast('保存失败: ' + e.message, false); }
+}
+
+async function runScheduleNow() {
+  confirmDialog('⚡ 立即执行', '将按当前配置执行一次定时清理（应用残余/网盘/Docker/tmp/回收站）。确定继续吗？', '执行', async () => {
+    try {
+      $('schedule-status').textContent = '执行中…';
+      const j = await api('/schedule/run', {});
+      const r = j.report || {};
+      const done = Object.values(r.types || {}).filter((t) => t && t.status === 'done').length;
+      $('schedule-status').textContent = `✓ 执行完成：${done} 类成功${(r.errors || []).length ? `，${r.errors.length} 个错误` : ''}`;
+      toast('定时清理执行完成');
+      await loadSchedule();
+    } catch (e) {
+      $('schedule-status').textContent = '✗ 执行失败';
+      toast('执行失败: ' + e.message, false);
+    }
+  });
+}
+
+async function loadSchedReports() {
+  try {
+    const j = await api('/schedule/reports');
+    const reports = j.reports || [];
+    const tb = $('tbl-sched-reports').querySelector('tbody');
+    tb.innerHTML = '';
+    $('no-sched-reports').style.display = reports.length ? 'none' : 'block';
+    $('tbl-sched-reports').style.display = reports.length ? '' : 'none';
+    for (const r of reports) {
+      const tr = document.createElement('tr');
+      const types = Object.entries(r.types || {}).map(([k, v]) => `${k}:${v.status || '-'}`).join('，');
+      tr.innerHTML = `<td>${new Date(r.startedAt).toLocaleString('zh-CN')}</td>
+        <td>${esc(types || '-')}</td>
+        <td>${esc(r.totalBytesText || '0 B')}</td>
+        <td>${(r.errors || []).length ? `<span class="risk risk-high">${(r.errors || []).length} 错误</span>` : '✅'}</td>`;
+      tb.appendChild(tr);
+    }
+  } catch (e) { /* 报告加载失败静默 */ }
+}
+
 /* ---------- Tab 切换 ---------- */
 document.querySelectorAll('.tab').forEach((b) => {
   b.addEventListener('click', () => {
@@ -698,6 +979,10 @@ document.querySelectorAll('.tab').forEach((b) => {
     else if (tab === 'tmp' && !state.tmp.length) scanTmp();
     else if (tab === 'sys-trash' && !state.sysTrash.length) scanSysTrash();
     else if (tab === 'empty' && !state.emptyDirs.length) scanEmpty();
+    else if (tab === 'dup' && !state.dupGroups.length) scanDup();
+    else if (tab === 'bigfiles' && !state.bigfiles.length) scanBigfiles();
+    else if (tab === 'sysclean' && !state.sysclean.length) scanSysclean();
+    else if (tab === 'schedule' && !state.scheduleLoaded) loadSchedule();
   });
 });
 
@@ -714,5 +999,11 @@ document.querySelectorAll('.tab').forEach((b) => {
   $('btn-tmp-scan').addEventListener('click', scanTmp);
   $('btn-sys-trash-scan').addEventListener('click', scanSysTrash);
   $('btn-empty-scan').addEventListener('click', scanEmpty);
+  $('btn-dup-scan').addEventListener('click', scanDup);
+  $('btn-bigfiles-scan').addEventListener('click', scanBigfiles);
+  $('btn-sysclean-scan').addEventListener('click', scanSysclean);
+  $('btn-schedule-load').addEventListener('click', loadSchedule);
+  $('btn-schedule-save').addEventListener('click', saveSchedule);
+  $('btn-schedule-run').addEventListener('click', runScheduleNow);
   doScan();
 })();

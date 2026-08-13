@@ -20,7 +20,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 const PORT = parseInt(process.env.PORT || '47939', 10);
-const VERSION = '1.2.0';
+const VERSION = '1.3.0';
 
 // 数据目录（cmd/main 注入 TRIM_PKGVAR；未注入时退化到本地 var）
 const VAR_DIR = process.env.TRIM_PKGVAR || path.join(__dirname, '..', '..', 'var');
@@ -32,6 +32,10 @@ const dockerApi = require('./api/docker.js');
 const tmpApi = require('./api/tmp.js');
 const trashApi = require('./api/trash.js');
 const emptyApi = require('./api/empty.js');
+const dupApi = require('./api/dup.js');
+const bigfilesApi = require('./api/bigfiles.js');
+const syscleanApi = require('./api/sysclean.js');
+const scheduleApi = require('./api/schedule.js');
 
 // ---------------- token 鉴权 ----------------
 const CONFIG_FILE = process.env.TRIM_PKGETC ? path.join(process.env.TRIM_PKGETC, 'config.conf') : null;
@@ -280,10 +284,111 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    // ---- M3 模块路由 ----
+
+    // POST /api/dup/scan
+    if (method === 'POST' && p === '/api/dup/scan') {
+      const body = await readBody(req);
+      const type = body.type === 'music' ? 'music' : 'files';
+      const r = await dupApi.scanDup({
+        type,
+        paths: Array.isArray(body.paths) ? body.paths : [],
+      });
+      if (r.error) { sendJSON(res, 400, { success: false, error: r.error }); return; }
+      sendJSON(res, 200, { success: true, ...r });
+      return;
+    }
+
+    // POST /api/dup/delete
+    if (method === 'POST' && p === '/api/dup/delete') {
+      const body = await readBody(req);
+      const mode = body.mode === 'permanent' ? 'permanent' : 'trash';
+      const r = await dupApi.deleteDupFiles({
+        files: Array.isArray(body.files) ? body.files : [],
+        mode,
+      });
+      sendJSON(res, 200, { success: r.failed.length === 0, moved: r.moved, failed: r.failed });
+      return;
+    }
+
+    // POST /api/bigfiles/scan
+    if (method === 'POST' && p === '/api/bigfiles/scan') {
+      const body = await readBody(req);
+      const r = bigfilesApi.scanBigFiles({
+        rootPath: body.rootPath || '/vol*',
+        minSize: body.minSize,
+        topN: body.topN,
+        depth: body.depth,
+      });
+      if (r.error) { sendJSON(res, 400, { success: false, error: r.error }); return; }
+      sendJSON(res, 200, { success: true, ...r });
+      return;
+    }
+
+    // POST /api/sysclean/scan
+    if (method === 'POST' && p === '/api/sysclean/scan') {
+      const items = syscleanApi.scanSysClean();
+      sendJSON(res, 200, { success: true, items });
+      return;
+    }
+
+    // POST /api/sysclean/delete
+    if (method === 'POST' && p === '/api/sysclean/delete') {
+      const body = await readBody(req);
+      const r = await syscleanApi.sysCleanDelete({ paths: Array.isArray(body.paths) ? body.paths : [] });
+      sendJSON(res, 200, { success: r.failed.length === 0, cleaned: r.cleaned, failed: r.failed, totalBytes: r.totalBytes });
+      return;
+    }
+
+    // GET /api/schedule（配置）
+    if (method === 'GET' && p === '/api/schedule') {
+      sendJSON(res, 200, { success: true, config: scheduleApi.getConfig() });
+      return;
+    }
+
+    // POST /api/schedule（保存配置）
+    if (method === 'POST' && p === '/api/schedule') {
+      const body = await readBody(req);
+      const cfg = await scheduleApi.setConfig(body);
+      sendJSON(res, 200, { success: true, config: cfg });
+      return;
+    }
+
+    // POST /api/schedule/run（立即执行）
+    if (method === 'POST' && p === '/api/schedule/run') {
+      const r = await scheduleApi.runNow();
+      sendJSON(res, 200, { success: true, report: r });
+      return;
+    }
+
+    // GET /api/schedule/reports（报告列表）
+    if (method === 'GET' && p === '/api/schedule/reports') {
+      sendJSON(res, 200, { success: true, reports: scheduleApi.listReports() });
+      return;
+    }
+
+    // GET /api/schedule/report?name=xxx（单份报告）
+    if (method === 'GET' && p === '/api/schedule/report') {
+      const name = url.searchParams.get('name') || '';
+      const r = scheduleApi.getReport(name);
+      if (!r) { sendJSON(res, 404, { success: false, error: 'report not found' }); return; }
+      sendJSON(res, 200, { success: true, report: r });
+      return;
+    }
+
     sendJSON(res, 404, { success: false, error: 'not found' });
   } catch (e) {
     sendJSON(res, 500, { success: false, error: String(e && e.message || e) });
   }
+});
+
+// 初始化定时清理（注入数据目录与 api 模块引用）
+scheduleApi.initSchedule(VAR_DIR, {
+  app: appApi,
+  netdisk: netdiskApi,
+  docker: dockerApi,
+  tmp: tmpApi,
+  trash: trashApi,
 });
 
 server.listen(PORT, '0.0.0.0', () => {

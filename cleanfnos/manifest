@@ -1,5 +1,5 @@
 appname               = cleanfnos
-version               = 1.2.0
+version               = 1.3.0
 display_name          = CleanFnOS 残留清理
 desc                  = 扫描并清理已卸载应用残留在 @appdata/@appconf/@apphome/@apptemp/@appmeta/@appshare 等目录及 docker- 系统用户的工具。@appshare 按 /var/apps/{app}/shares 符号链接识别归属，避免误删在用应用的共享目录。删除默认移入回收站，可恢复。
 arch                  = x86_64
