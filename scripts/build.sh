@@ -7,7 +7,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-APP_SRC="${REPO_ROOT}/cleanfnos"
+APP_SRC="${REPO_ROOT}"
 
 ARCH="${1:-x86}"
 VERSION_ARG="${2:-}"

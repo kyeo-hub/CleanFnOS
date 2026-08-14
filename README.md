@@ -45,9 +45,23 @@
 
 ```bash
 # 依赖：nodejs_v24（fnOS 商店安装）
-fnpack build -d cleanfnos
+fnpack build
 # 产物：cleanfnos.fpk
 ```
+
+## 双架构自动发布
+
+GitHub Actions 已配置双架构自动构建（参考社区商店 conversun 做法）：
+
+```bash
+git tag v1.6.0 && git push origin v1.6.0
+```
+
+推送 `v*` tag 即自动构建 **x86 + arm64** 两个 fpk 并发布 GitHub Release：
+- `cleanfnos_<版本>_x86.fpk`（x86_64）
+- `cleanfnos_<版本>_arm.fpk`（aarch64）
+
+也可手动运行 `scripts/build.sh x86|arm` 本地打包（产物在 `dist/`）。
 
 ## 使用说明
 

@@ -8,3 +8,4 @@ var/
 backup_pre_reinstall_*/
 dist/
 cleanfnos.fpk
+PLAN.md
