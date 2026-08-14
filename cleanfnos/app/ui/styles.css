@@ -84,8 +84,11 @@ main { flex: 1; padding: 20px 24px; min-width: 0; overflow-x: hidden; }
 button {
   border: none; border-radius: 8px; padding: 8px 16px; font-size: 14px; cursor: pointer;
   color: #fff; background: var(--panel2); border: 1px solid var(--border);
+  transition: background .15s, border-color .15s, transform .1s, opacity .15s;
 }
-button:disabled { opacity: .4; cursor: not-allowed; }
+button:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+button:not(:disabled):hover { filter: brightness(1.1); }
+button:not(:disabled):active { transform: scale(.97); }
 button.primary { background: var(--accent); color: #0f172a; border-color: var(--accent); font-weight: 600; }
 button.danger { background: var(--danger); border-color: var(--danger); }
 button.ok { background: var(--ok); border-color: var(--ok); color: #0f172a; }
@@ -95,6 +98,9 @@ select {
   background: var(--panel2); color: var(--text); border: 1px solid var(--border);
   border-radius: 8px; padding: 8px 10px; font-size: 14px;
 }
+input[type="text"], input[type="password"], input[type="number"] { transition: border-color .15s; }
+input[type="text"]:focus, input[type="password"]:focus, input[type="number"]:focus,
+select:focus { outline: none; border-color: var(--accent); }
 
 .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
 .stat {
@@ -167,6 +173,40 @@ tbody tr:hover { background: rgba(56, 189, 248, .05); }
 .glossary-item { margin-bottom: 8px; padding: 8px 10px; background: var(--panel2); border-radius: 8px; }
 .glossary-item b { font-size: 13px; display: block; margin-bottom: 2px; }
 .glossary-item span { font-size: 12px; color: var(--muted); line-height: 1.6; display: block; }
+
+/* ---------- 去重卡片 ---------- */
+.dup-card {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+  margin-bottom: 12px; overflow: hidden;
+}
+.dup-head {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 10px 14px; background: var(--panel2); border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.dup-files { width: 100%; }
+.dup-files td { padding: 6px 14px; }
+
+/* ---------- 表单区（定时清理 / 通知设置） ---------- */
+.schedule-form {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+  padding: 14px 16px; margin-bottom: 12px;
+  display: flex; gap: 16px; flex-wrap: wrap; align-items: center; font-size: 14px;
+}
+.schedule-form label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+.sched-types { display: flex; gap: 14px; flex-wrap: wrap; width: 100%; margin-top: 6px; }
+
+.notify-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; padding: 12px 14px; }
+.notify-field label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 4px; }
+
+/* ---------- VM 操作按钮 ---------- */
+.vm-act { padding: 4px 10px; font-size: 12px; margin-right: 4px; }
+
+/* ---------- 自定义滚动条 ---------- */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted); }
 
 /* ---------- 移动端自适应（<768px） ---------- */
 @media (max-width: 767px) {
