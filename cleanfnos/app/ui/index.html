@@ -7,28 +7,32 @@
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<header>
-  <h1>🧹 CleanFnOS 残留清理</h1>
-  <span id="version" class="badge">v-</span>
-  <button id="btn-passwd" class="plain" title="修改访问密码" style="margin-left:auto">🔑 改密码</button>
-  <button id="btn-theme" class="plain" title="切换明暗主题">🌓 主题</button>
-</header>
-
-<nav class="tabs">
-  <button id="tab-scan" class="tab active" data-tab="scan">残留扫描</button>
-  <button id="tab-netdisk" class="tab" data-tab="netdisk">网盘残余</button>
-  <button id="tab-docker" class="tab" data-tab="docker">Docker</button>
-  <button id="tab-tmp" class="tab" data-tab="tmp">tmp 清理</button>
-  <button id="tab-trash" class="tab" data-tab="trash">回收站 <span id="trash-count" class="count"></span></button>
-  <button id="tab-sys-trash" class="tab" data-tab="sys-trash">系统回收站</button>
-  <button id="tab-empty" class="tab" data-tab="empty">空目录</button>
-  <button id="tab-dup" class="tab" data-tab="dup">去重</button>
-  <button id="tab-bigfiles" class="tab" data-tab="bigfiles">大文件</button>
-  <button id="tab-sysclean" class="tab" data-tab="sysclean">系统清理</button>
-  <button id="tab-schedule" class="tab" data-tab="schedule">定时清理</button>
-  <button id="tab-kvm" class="tab" data-tab="kvm">KVM</button>
-  <button id="tab-notify" class="tab" data-tab="notify">通知</button>
-</nav>
+<div class="layout">
+<aside class="sidebar">
+  <header>
+    <h1>🧹 CleanFnOS</h1>
+    <span id="version" class="badge">v-</span>
+  </header>
+  <nav class="tabs">
+    <button id="tab-scan" class="tab active" data-tab="scan">残留扫描</button>
+    <button id="tab-netdisk" class="tab" data-tab="netdisk">网盘残余</button>
+    <button id="tab-docker" class="tab" data-tab="docker">Docker</button>
+    <button id="tab-tmp" class="tab" data-tab="tmp">tmp 清理</button>
+    <button id="tab-trash" class="tab" data-tab="trash">回收站 <span id="trash-count" class="count"></span></button>
+    <button id="tab-sys-trash" class="tab" data-tab="sys-trash">系统回收站</button>
+    <button id="tab-empty" class="tab" data-tab="empty">空目录</button>
+    <button id="tab-dup" class="tab" data-tab="dup">去重</button>
+    <button id="tab-bigfiles" class="tab" data-tab="bigfiles">大文件</button>
+    <button id="tab-sysclean" class="tab" data-tab="sysclean">系统清理</button>
+    <button id="tab-schedule" class="tab" data-tab="schedule">定时清理</button>
+    <button id="tab-kvm" class="tab" data-tab="kvm">KVM</button>
+    <button id="tab-notify" class="tab" data-tab="notify">通知</button>
+  </nav>
+  <div class="sidebar-foot">
+    <button id="btn-passwd" class="plain" title="修改访问密码">🔑 改密码</button>
+    <button id="btn-theme" class="plain" title="切换明暗主题">🌓 主题</button>
+  </div>
+</aside>
 
 <main>
   <!-- ============ 扫描页 ============ -->
@@ -349,6 +353,7 @@
     <p class="hint">配置各渠道后点击「测试」验证连通性。SSRF 防护：仅允许公网 http(s) 地址，内网/保留地址将被拒绝。通知会随定时清理报告自动推送（需在上方勾选「定时清理完成后推送报告」）。</p>
   </section>
 </main>
+</div>
 
 <div id="toast" class="toast"></div>
 <div id="modal" class="modal hidden">

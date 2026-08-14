@@ -32,28 +32,48 @@ body.light .toast { box-shadow: 0 8px 30px rgba(0, 0, 0, .18); }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
   font-family: -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
-  background: var(--bg); color: var(--text); min-height: 100vh; padding-bottom: 60px;
+  background: var(--bg); color: var(--text); min-height: 100vh;
 }
 
-header {
-  display: flex; align-items: center; gap: 12px;
-  padding: 18px 24px; background: var(--panel); border-bottom: 1px solid var(--border);
+/* ---------- 左右布局：左侧边栏 + 右侧内容区 ---------- */
+.layout { display: flex; min-height: 100vh; }
+
+.sidebar {
+  width: 220px; flex-shrink: 0; background: var(--panel);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  position: sticky; top: 0; height: 100vh;
 }
-header h1 { font-size: 20px; font-weight: 600; }
+.sidebar header {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
+  padding: 16px 16px 12px; border-bottom: 1px solid var(--border);
+}
+.sidebar header h1 { font-size: 18px; font-weight: 600; }
 .badge {
   background: var(--panel2); border: 1px solid var(--border); border-radius: 999px;
   padding: 2px 10px; font-size: 12px; color: var(--muted);
 }
 
-.tabs { display: flex; gap: 8px; padding: 12px 24px; }
-.tab {
-  background: var(--panel); color: var(--text); border: 1px solid var(--border);
-  padding: 8px 18px; border-radius: 8px; cursor: pointer; font-size: 14px;
+.tabs {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 12px; flex: 1; overflow-y: auto;
 }
+.tab {
+  background: transparent; color: var(--text); border: 1px solid transparent;
+  padding: 10px 14px; border-radius: 8px; cursor: pointer; font-size: 14px;
+  text-align: left; white-space: nowrap;
+}
+.tab:hover { background: var(--panel2); }
 .tab.active { background: var(--accent); color: #0f172a; border-color: var(--accent); font-weight: 600; }
 .count { font-size: 12px; opacity: .8; }
 
-main { padding: 0 24px; }
+.sidebar-foot {
+  display: flex; gap: 8px; padding: 12px;
+  border-top: 1px solid var(--border);
+}
+.sidebar-foot button { flex: 1; }
+
+main { flex: 1; padding: 20px 24px; min-width: 0; overflow-x: hidden; }
 .view { display: none; }
 .view.active { display: block; }
 
@@ -138,11 +158,25 @@ tbody tr:hover { background: rgba(56, 189, 248, .05); }
 
 /* ---------- 移动端自适应（<768px） ---------- */
 @media (max-width: 767px) {
-  header { padding: 14px 16px; flex-wrap: wrap; }
-  header h1 { font-size: 17px; }
-  .tabs { padding: 10px 16px; gap: 6px; flex-wrap: wrap; }
-  .tab { padding: 7px 12px; font-size: 13px; }
-  main { padding: 0 12px; }
+  .layout { flex-direction: column; }
+  .sidebar {
+    width: 100%; height: auto; position: static; flex-direction: row;
+    flex-wrap: wrap; align-items: center;
+    border-right: none; border-bottom: 1px solid var(--border);
+  }
+  .sidebar header {
+    flex: 1 1 100%; flex-direction: row; align-items: center;
+    justify-content: space-between; padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .sidebar header h1 { font-size: 15px; }
+  .tabs {
+    flex: 1 1 100%; flex-direction: row; overflow-x: auto;
+    padding: 8px 10px; gap: 6px;
+  }
+  .tab { padding: 7px 12px; font-size: 13px; white-space: nowrap; }
+  .sidebar-foot { flex: 1 1 100%; padding: 8px 10px; border-top: none; }
+  main { padding: 12px; }
   .toolbar { gap: 8px; margin: 12px 0; }
   .toolbar input, .toolbar select { max-width: 100%; }
   .stats { grid-template-columns: repeat(2, 1fr); gap: 8px; }
