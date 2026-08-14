@@ -1234,6 +1234,48 @@ function showPasswdDialog() {
   setTimeout(() => { const i = $('pw-old'); if (i) i.focus(); }, 50);
 }
 
+/* ---------- 名词解释 ---------- */
+const GLOSSARY = [
+  { group: '虚拟化', items: [
+    { term: 'KVM', desc: '飞牛虚拟机功能的核心技术，用它在 NAS 里运行 Windows/Linux 虚拟机（相当于在 NAS 里再开一台电脑）。' },
+    { term: '虚拟机', desc: '在 NAS 里虚拟出来的一台"电脑"，独立运行操作系统，可随时开机/关机，互不影响。' },
+    { term: '快照', desc: '虚拟机的"后悔药"——某个时间点的完整备份。系统出问题时可以一键恢复回快照时的状态。' },
+    { term: '鬼影快照', desc: '快照删除后残留在磁盘文件里的"隐身"快照——用管理界面看不到它，但它仍占用磁盘空间。本工具能找出来并删除。' },
+  ]},
+  { group: '存储与清理', items: [
+    { term: '应用残留', desc: '卸载应用后遗留在磁盘上的数据文件（卸载不彻底留下的"尸体"）。清理后可释放空间。' },
+    { term: '孤儿目录', desc: '找不到所属应用的残留目录（应用已卸载，目录还在）。' },
+    { term: '@appshare', desc: '应用共享数据目录，多个应用可以共用。本工具按符号链接识别归属，避免误删在用应用的共享数据。' },
+    { term: 'TMP', desc: '系统临时目录（/tmp 等），程序运行产生的临时文件。超过 24 小时未使用的可以安全清理。' },
+    { term: '回收站', desc: '删除文件的暂存区。误删的文件可以从这里恢复，定期清空可释放空间。' },
+    { term: '网盘挂载', desc: '把网盘或远程存储挂载到 NAS 的一个目录（类似把移动硬盘插到 NAS 上）。' },
+    { term: 'Build Cache', desc: 'Docker 构建镜像时产生的缓存，可以自动重建，清理后下次构建会重新生成。' },
+    { term: 'Dangling 镜像', desc: '没有标签的悬空 Docker 镜像——旧版本构建后留下的"孤儿"镜像，占空间但通常没有实际用途。' },
+  ]},
+  { group: '技术术语', items: [
+    { term: 'Docker', desc: '容器技术，把应用连同依赖打包运行，互不影响。飞牛商店里的 Docker 应用都用它运行。' },
+    { term: '去重 / SHA-256', desc: '用"文件指纹"（SHA-256 哈希）比对文件内容，找出内容完全相同的重复文件，删除多余副本释放空间。' },
+    { term: 'ID3 / FLAC', desc: '音乐文件的元数据标签（歌名/歌手/专辑等信息）。音乐去重根据这些标签辅助识别重复歌曲。' },
+    { term: '定时清理', desc: '按设定时间自动执行清理并生成报告，不用手动操作。' },
+    { term: '风险分级', desc: '按清理操作的危险程度分低/中/高三档：低风险可放心清理（会自动重建），高风险（如删应用数据）需勾选确认。' },
+  ]},
+];
+
+function showGlossary() {
+  const content = $('glossary-content');
+  content.innerHTML = GLOSSARY.map((g) => `
+    <div class="glossary-group">
+      <h4>${esc(g.group)}</h4>
+      ${g.items.map((i) => `
+        <div class="glossary-item">
+          <b>${esc(i.term)}</b>
+          <span>${esc(i.desc)}</span>
+        </div>`).join('')}
+    </div>`).join('');
+  $('modal-glossary').classList.remove('hidden');
+}
+$('glossary-close').addEventListener('click', () => $('modal-glossary').classList.add('hidden'));
+
 /* ---------- Tab 切换 ---------- */
 document.querySelectorAll('.tab').forEach((b) => {
   b.addEventListener('click', () => {
@@ -1280,6 +1322,7 @@ document.querySelectorAll('.tab').forEach((b) => {
   $('btn-notify-load').addEventListener('click', loadNotify);
   $('btn-notify-save').addEventListener('click', saveNotify);
   $('btn-passwd').addEventListener('click', showPasswdDialog);
+  $('btn-glossary').addEventListener('click', showGlossary);
   $('btn-theme').addEventListener('click', () => {
     applyTheme(document.body.classList.contains('light') ? 'dark' : 'light');
   });

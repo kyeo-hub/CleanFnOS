@@ -30,6 +30,7 @@
   </nav>
   <div class="sidebar-foot">
     <button id="btn-passwd" class="plain" title="修改访问密码">🔑 改密码</button>
+    <button id="btn-glossary" class="plain" title="名词解释">📖 名词</button>
     <button id="btn-theme" class="plain" title="切换明暗主题">🌓 主题</button>
   </div>
 </aside>
@@ -363,6 +364,17 @@
     <div class="modal-actions">
       <button id="modal-cancel" class="plain">取消</button>
       <button id="modal-ok" class="danger">确认</button>
+    </div>
+  </div>
+</div>
+
+<!-- 名词解释弹窗 -->
+<div id="modal-glossary" class="modal hidden">
+  <div class="modal-box glossary-box">
+    <h3>📖 名词解释 <span class="hint">（面向非专业用户）</span></h3>
+    <div id="glossary-content" class="glossary-content"></div>
+    <div class="modal-actions">
+      <button id="glossary-close" class="plain">关闭</button>
     </div>
   </div>
 </div>

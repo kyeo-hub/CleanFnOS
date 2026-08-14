@@ -156,6 +156,18 @@ tbody tr:hover { background: rgba(56, 189, 248, .05); }
 .modal-box p { color: var(--muted); font-size: 14px; line-height: 1.7; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
 
+/* ---------- 名词解释弹窗 ---------- */
+.glossary-box { max-width: 620px; max-height: 80vh; display: flex; flex-direction: column; }
+.glossary-content { overflow-y: auto; padding-right: 4px; }
+.glossary-group { margin-bottom: 14px; }
+.glossary-group h4 {
+  font-size: 13px; color: var(--accent); margin-bottom: 6px;
+  padding-bottom: 4px; border-bottom: 1px solid var(--border);
+}
+.glossary-item { margin-bottom: 8px; padding: 8px 10px; background: var(--panel2); border-radius: 8px; }
+.glossary-item b { font-size: 13px; display: block; margin-bottom: 2px; }
+.glossary-item span { font-size: 12px; color: var(--muted); line-height: 1.6; display: block; }
+
 /* ---------- 移动端自适应（<768px） ---------- */
 @media (max-width: 767px) {
   .layout { flex-direction: column; }
