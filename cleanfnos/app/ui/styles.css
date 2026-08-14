@@ -59,19 +59,30 @@ body {
   padding: 12px; flex: 1; overflow-y: auto;
 }
 .tab {
+  position: relative;
   background: transparent; color: var(--text); border: 1px solid transparent;
   padding: 10px 14px; border-radius: 8px; cursor: pointer; font-size: 14px;
   text-align: left; white-space: nowrap;
+  transition: background .15s, color .15s;
 }
 .tab:hover { background: var(--panel2); }
-.tab.active { background: var(--accent); color: #0f172a; border-color: var(--accent); font-weight: 600; }
+.tab.active {
+  background: var(--accent); color: #0f172a; border-color: var(--accent); font-weight: 600;
+}
+.tab.active::before {
+  content: ''; position: absolute; left: -12px; top: 50%; transform: translateY(-50%);
+  width: 4px; height: 60%; border-radius: 0 4px 4px 0; background: var(--accent);
+}
 .count { font-size: 12px; opacity: .8; }
 
 .sidebar-foot {
-  display: flex; gap: 8px; padding: 12px;
+  display: flex; flex-direction: column; gap: 8px; padding: 12px;
   border-top: 1px solid var(--border);
 }
-.sidebar-foot button { flex: 1; }
+.sidebar-foot button {
+  width: 100%; padding: 9px 12px; white-space: nowrap;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
 
 main { flex: 1; padding: 20px 24px; min-width: 0; overflow-x: hidden; }
 .view { display: none; }
@@ -106,6 +117,12 @@ select:focus { outline: none; border-color: var(--accent); }
 .stat {
   background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
   padding: 16px; text-align: center;
+  transition: transform .15s, border-color .15s, box-shadow .15s;
+}
+.stat:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .25);
 }
 .stat b { display: block; font-size: 26px; color: var(--accent); }
 .stat span { font-size: 12px; color: var(--muted); }
@@ -119,8 +136,10 @@ h2 { font-size: 15px; margin: 20px 0 10px; }
 }
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
 th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; }
-th { color: var(--muted); font-weight: 500; background: var(--panel2); white-space: nowrap; }
+th { color: var(--muted); font-weight: 500; background: var(--panel2); white-space: nowrap; position: sticky; top: 0; z-index: 1; }
 tbody tr:hover { background: rgba(56, 189, 248, .05); }
+tbody tr:nth-child(even) { background: rgba(148, 163, 184, .04); }
+tbody tr:nth-child(even):hover { background: rgba(56, 189, 248, .07); }
 .app-name { font-weight: 600; white-space: nowrap; }
 .path-list { list-style: none; }
 .path-list li { margin: 2px 0; }
@@ -137,7 +156,7 @@ tbody tr:hover { background: rgba(56, 189, 248, .05); }
 .risk-low { background: rgba(34,197,94,.15); color: #4ade80; }
 .risk-med { background: rgba(234,179,8,.15); color: #facc15; }
 .risk-high { background: rgba(239,68,68,.18); color: #f87171; }
-.empty { padding: 24px; text-align: center; color: var(--muted); }
+.empty { padding: 24px; text-align: center; color: var(--muted); font-size: 13px; }
 
 .toast {
   position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(80px);
@@ -227,7 +246,8 @@ tbody tr:hover { background: rgba(56, 189, 248, .05); }
     padding: 8px 10px; gap: 6px;
   }
   .tab { padding: 7px 12px; font-size: 13px; white-space: nowrap; }
-  .sidebar-foot { flex: 1 1 100%; padding: 8px 10px; border-top: none; }
+  .sidebar-foot { flex: 1 1 100%; flex-direction: row; padding: 8px 10px; border-top: none; }
+  .sidebar-foot button { padding: 7px 8px; font-size: 13px; }
   main { padding: 12px; }
   .toolbar { gap: 8px; margin: 12px 0; }
   .toolbar input, .toolbar select { max-width: 100%; }
