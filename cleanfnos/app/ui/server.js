@@ -118,7 +118,9 @@ function sendJSON(res, code, obj) {
   res.writeHead(code, {
     'Content-Type': 'application/json; charset=utf-8',
     'Cache-Control': 'no-store',
-    'Access-Control-Allow-Origin': '*',
+    // 同源应用（桌面 iframe 由飞牛代理），不开放跨域
+    'Access-Control-Allow-Origin': 'null',
+    'X-Content-Type-Options': 'nosniff',
   });
   res.end(body);
 }
@@ -161,7 +163,8 @@ const server = http.createServer(async (req, res) => {
       const uiDir = __dirname;
       let rel = p === '/' ? 'index.html' : p.slice(1);
       const fp = path.normalize(path.join(uiDir, rel));
-      if (!fp.startsWith(uiDir)) { res.writeHead(403); res.end('Forbidden'); return; }
+      // 严格路径校验：必须位于 uiDir 内（防前缀穿越，如 /ui_evil）
+      if (fp !== uiDir && !fp.startsWith(uiDir + path.sep)) { res.writeHead(403); res.end('Forbidden'); return; }
       let data;
       try { data = await fsp.readFile(fp); } catch (e) { res.writeHead(404); res.end('Not Found'); return; }
       const ext = path.extname(fp).toLowerCase();
@@ -491,7 +494,9 @@ const server = http.createServer(async (req, res) => {
 
     sendJSON(res, 404, { success: false, error: 'not found' });
   } catch (e) {
-    sendJSON(res, 500, { success: false, error: String(e && e.message || e) });
+    // 500 错误不暴露内部细节（防路径/堆栈泄露），详情写入服务端日志
+    try { fs.appendFileSync(path.join(VAR_DIR, 'info.log'), `${new Date().toISOString()} [server-error] ${String(e && e.stack || e)}\n`); } catch (e2) { /* 忽略 */ }
+    sendJSON(res, 500, { success: false, error: 'internal error' });
   }
 });
 

@@ -194,12 +194,13 @@ async function scanDup({ type = 'files', paths = [] }) {
   // 并发流式哈希
   const hashed = await poolMap(toHash, (f) => hashFile(f.path, f.size), CONCURRENCY);
 
-  // 按 hash 分组
+  // 按 hash 分组（path->file 索引，避免 O(n²) 查找）
+  const byPath = new Map(toHash.map((f) => [f.path, f]));
   const hashMap = new Map();
   for (const h of hashed) {
     if (!h || !h.hash) continue;
     if (!hashMap.has(h.hash)) hashMap.set(h.hash, []);
-    const f = toHash.find((x) => x.path === h.path);
+    const f = byPath.get(h.path);
     if (f) hashMap.get(h.hash).push(f);
   }
 

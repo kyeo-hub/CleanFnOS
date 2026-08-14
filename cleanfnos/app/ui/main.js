@@ -58,7 +58,18 @@ async function api(path, body) {
     opt.headers = opt.headers || {};
     opt.headers['X-Auth-Token'] = apiToken;
   }
-  const r = await fetch('/api' + path, opt);
+  // 请求超时保护（120s，大目录扫描可能较久），防挂起
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), 120000);
+  opt.signal = ac.signal;
+  let r;
+  try {
+    r = await fetch('/api' + path, opt);
+  } catch (e) {
+    clearTimeout(timer);
+    throw new Error(e && e.name === 'AbortError' ? '请求超时' : (e && e.message || '网络错误'));
+  }
+  clearTimeout(timer);
   const j = await r.json().catch(() => ({}));
   if (r.status === 401 && j.code === 401) {
     await askToken();

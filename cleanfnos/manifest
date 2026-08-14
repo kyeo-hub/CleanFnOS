@@ -1,6 +1,6 @@
 appname               = cleanfnos
 version               = 1.5.0
-display_name          = CleanFnOS 残留清理
+display_name          = CleanFnOS 系统清理
 desc                  = 飞牛 fnOS 综合清理工具：应用残留（@appdata/@appconf/@apphome/@apptemp/@appmeta/@appshare 及 /usr/local 链接、docker- 系统用户，@appshare 按符号链接归属识别零误报）、网盘挂载残余、Docker（容器/卷/网络/镜像/BuildCache）、tmp、系统回收站分级、空目录、文件/音乐去重、大文件查找、系统缓存清理（apt/npm/pip/uv/浏览器/日志）、KVM 鬼影快照检测与 VM 管理、定时清理计划与通知推送（Bark/钉钉/飞书/企业微信/Telegram）。删除默认移入回收站可恢复，高风险操作需勾选确认，操作留审计日志，支持明暗主题与移动端。
 arch                  = x86_64
 platform              = x86

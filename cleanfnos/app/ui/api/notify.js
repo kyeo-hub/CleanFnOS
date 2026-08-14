@@ -41,7 +41,7 @@ function isSafeNotifyUrl(u) {
 
 // ---------------- HTTP 工具 ----------------
 
-/** 通用 POST JSON（带超时与大小上限） */
+/** 通用 POST（带超时与大小上限）。body 可为对象（JSON）或字符串（原样发送） */
 function httpPostJson(url, body, headers = {}, timeout = 15000) {
   return new Promise((resolve) => {
     if (!isSafeNotifyUrl(url)) {
@@ -54,7 +54,8 @@ function httpPostJson(url, body, headers = {}, timeout = 15000) {
       return;
     }
     const mod = parsed.protocol === 'https:' ? https : http;
-    const payload = JSON.stringify(body);
+    // body 为字符串时原样发送（webhook 自定义模板），对象则 JSON 序列化
+    const payload = typeof body === 'string' ? body : JSON.stringify(body);
     const options = {
       hostname: parsed.hostname,
       port: parsed.port || (parsed.protocol === 'https:' ? 443 : 80),

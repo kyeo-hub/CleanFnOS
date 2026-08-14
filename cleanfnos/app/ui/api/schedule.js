@@ -233,9 +233,9 @@ function getConfig() {
 async function setConfig(patch) {
   if (patch && typeof patch === 'object') {
     if (typeof patch.enabled === 'boolean') config.enabled = patch.enabled;
-    if (typeof patch.hour === 'number') config.hour = patch.hour;
-    if (typeof patch.minute === 'number') config.minute = patch.minute;
-    if (typeof patch.intervalHours === 'number' && patch.intervalHours >= 1) config.intervalHours = patch.intervalHours;
+    if (typeof patch.hour === 'number' && patch.hour >= 0 && patch.hour <= 23) config.hour = Math.floor(patch.hour);
+    if (typeof patch.minute === 'number' && patch.minute >= 0 && patch.minute <= 59) config.minute = Math.floor(patch.minute);
+    if (typeof patch.intervalHours === 'number' && patch.intervalHours >= 1 && patch.intervalHours <= 168) config.intervalHours = patch.intervalHours;
     if (patch.cleanupTypes && typeof patch.cleanupTypes === 'object') {
       for (const [k, v] of Object.entries(patch.cleanupTypes)) {
         if (!config.cleanupTypes[k]) continue;
