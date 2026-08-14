@@ -6,3 +6,5 @@ fpk.json
 var/
 *.log
 backup_pre_reinstall_*/
+dist/
+cleanfnos.fpk

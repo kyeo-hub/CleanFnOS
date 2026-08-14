@@ -1,0 +1,95 @@
+name: Build & Release
+
+# 触发：推送 v* tag（如 v1.5.0）或手动运行
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build (${{ matrix.arch }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86, arm]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install fnpack
+        run: |
+          curl -fsSL https://static2.fnnas.com/fnpack/fnpack-1.2.1-linux-amd64 -o fnpack
+          chmod +x fnpack
+          sudo mv fnpack /usr/local/bin/fnpack
+          fnpack --help | head -2
+
+      - name: Build fpk (${{ matrix.arch }})
+        run: bash scripts/build.sh ${{ matrix.arch }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: fpk-${{ matrix.arch }}
+          path: dist/*.fpk
+          retention-days: 1
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Generate release notes
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#v}"
+          PREV_TAG="$(git tag --sort=-version:refname | grep '^v' | awk -v t="$TAG" 'found{print;exit} $0==t{found=1}')"
+          {
+            printf '# 📦 CleanFnOS %s\n\n' "$VERSION"
+            printf '飞牛 fnOS 综合清理工具（卸载应用残留/网盘/Docker/临时文件/去重/大文件/系统缓存/虚拟机/定时清理/通知推送）。\n\n'
+            printf '## 🗂 安装包\n\n| 架构 | 文件 |\n|------|------|\n'
+            for f in artifacts/fpk-*/*.fpk; do
+              name="$(basename "$f")"
+              case "$name" in
+                *_x86.fpk) arch="x86_64" ;;
+                *_arm.fpk) arch="aarch64" ;;
+                *) arch="-" ;;
+              esac
+              printf '| %s | `%s` |\n' "$arch" "$name"
+            done
+            printf '\n## 📝 更新内容\n\n'
+            if [ -n "$PREV_TAG" ]; then
+              git log --pretty=format:"- %s [%h](https://github.com/${{ github.repository }}/commit/%H)" "${PREV_TAG}..${TAG}"
+            else
+              git log --pretty=format:"- %s [%h](https://github.com/${{ github.repository }}/commit/%H)" --max-count=20
+            fi
+            printf '\n\n## 🛠 安装方式\n\n1. 下载对应架构的 `.fpk`\n2. 飞牛应用中心 → 左下角 **手动安装**\n3. 选择文件完成安装\n'
+          } > RELEASE_NOTES.md
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: "CleanFnOS ${{ github.ref_name }}"
+          body_path: RELEASE_NOTES.md
+          files: artifacts/fpk-*/*.fpk
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-alpha') }}
