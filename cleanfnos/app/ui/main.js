@@ -3,8 +3,8 @@
 /* ---------- 状态 ---------- */
 const state = {
   groups: [],    // 聚合卡片 { app, count, size, sizeText, risk, riskLabel, items:[] }
-  links: [],     // 链接残留 { path, target, app }
-  users: [],     // 用户残留 { user, app }
+  links: [],     // 卸载应用链接残留 { path, target, app }
+  users: [],     // 卸载应用残留用户 { user, app }
   trash: [],
   netdisk: [],   // 网盘残余 { id, path, size, sizeText }
   docker: null,  // { containers, volumes, networks, images, buildCache }
@@ -174,7 +174,7 @@ function fmtTotal() {
   return total + ' B';
 }
 
-/* ---------- 残留目录（聚合卡片）渲染 ---------- */
+/* ---------- 卸载应用残留目录（聚合卡片）渲染 ---------- */
 const TYPE_LABEL = {
   data: '@appdata（数据）', conf: '@appconf（配置）', home: '@apphome（用户数据）',
   temp: '@apptemp（临时）', meta: '@appmeta（元数据）', share: '@appshare（共享）',
@@ -304,7 +304,7 @@ $('btn-delete').addEventListener('click', () => {
   confirmDialog(
     permanent ? '⚠️ 永久删除确认' : '清理确认',
     `将处理 <b>${paths.length + links.length + users.length}</b> 项：<br>` +
-      `${paths.length} 个残留目录、${links.length} 个链接残留、${users.length} 个残留用户。<br><br>` +
+      `${paths.length} 个残留目录、${links.length} 个链接残留、${users.length} 个残留用户（均为卸载应用遗留）。<br><br>` +
       riskNote +
       (permanent
         ? '<b style="color:#d33">永久删除不可恢复！</b> 确定要彻底删除吗？'
@@ -554,7 +554,7 @@ async function scanTmp() {
     state.tmp = j.items || [];
     renderTmp();
     $('tmp-status').textContent = `✓ ${state.tmp.length} 个 tmp 文件`;
-    toast('tmp 扫描完成');
+    toast('临时文件扫描完成');
   } catch (e) {
     $('tmp-status').textContent = '✗ 扫描失败';
     toast('扫描失败: ' + e.message, false);
@@ -596,7 +596,7 @@ $('chk-all-tmp').addEventListener('change', (e) => {
 $('btn-tmp-delete').addEventListener('click', () => {
   const paths = selectedTmp();
   if (!paths.length) return;
-  confirmDialog('tmp 清理确认', `将移入回收站 <b>${paths.length}</b> 个 24h+ 未访问的 tmp 文件（可恢复）。确定继续吗？`, '移入回收站', async () => {
+  confirmDialog('临时文件清理确认', `将移入回收站 <b>${paths.length}</b> 个 24h+ 未访问的临时文件（可恢复）。确定继续吗？`, '移入回收站', async () => {
     try {
       const j = await api('/tmp/delete', { paths, mode: 'trash' });
       toast(`完成：${(j.moved || []).length} 项成功${(j.failed || []).length ? `，${j.failed.length} 项失败` : ''}`);
@@ -745,7 +745,7 @@ async function scanDup() {
     state.dupGroups = j.groups || [];
     renderDup(j.stats || {});
     $('dup-status').textContent = `✓ 扫描 ${(j.stats || {}).totalFiles || 0} 个文件，${state.dupGroups.length} 组重复`;
-    toast('去重扫描完成');
+    toast('重复文件去重完成');
   } catch (e) {
     $('dup-status').textContent = '✗ 扫描失败';
     toast('扫描失败: ' + e.message, false);
@@ -808,7 +808,7 @@ function syncDupBtn() {
 $('btn-dup-delete').addEventListener('click', () => {
   const files = selectedDup();
   if (!files.length) return;
-  confirmDialog('去重删除确认', `将删除 <b>${files.length}</b> 个重复文件副本（移入回收站可恢复，每个重复组保留第一个）。确定继续吗？`, '移入回收站', async () => {
+  confirmDialog('重复文件删除确认', `将删除 <b>${files.length}</b> 个重复文件副本（移入回收站可恢复，每个重复组保留第一个）。确定继续吗？`, '移入回收站', async () => {
     try {
       const j = await api('/dup/delete', { files, mode: 'trash' });
       toast(`完成：${(j.moved || []).length} 项成功${(j.failed || []).length ? `，${j.failed.length} 项失败` : ''}`);
@@ -827,7 +827,7 @@ async function scanBigfiles() {
     state.bigfiles = j.files || [];
     renderBigfiles();
     $('bigfiles-status').textContent = `✓ ${state.bigfiles.length} 个大文件${j.truncated ? `（已截断，共 ${j.totalCandidates || 0} 个候选）` : ''}，${(j.elapsedMs / 1000).toFixed(1)}s`;
-    toast('大文件扫描完成');
+    toast('大文件查找完成');
   } catch (e) {
     $('bigfiles-status').textContent = '✗ 扫描失败';
     toast('扫描失败: ' + e.message, false);
@@ -1032,7 +1032,7 @@ async function scanKvm() {
     state.kvmGhosts = j.ghostSnapshots || [];
     renderKvm();
     $('kvm-status').textContent = `✓ ${state.kvmVms.length} 个 VM，${state.kvmGhosts.length} 个鬼影快照`;
-    toast('KVM 扫描完成');
+    toast('虚拟机扫描完成');
   } catch (e) {
     $('kvm-status').textContent = '✗ 扫描失败';
     toast('扫描失败: ' + e.message, false);
@@ -1243,7 +1243,7 @@ const GLOSSARY = [
     { term: '鬼影快照', desc: '快照删除后残留在磁盘文件里的"隐身"快照——用管理界面看不到它，但它仍占用磁盘空间。本工具能找出来并删除。' },
   ]},
   { group: '存储与清理', items: [
-    { term: '应用残留', desc: '卸载应用后遗留在磁盘上的数据文件（卸载不彻底留下的"尸体"）。清理后可释放空间。' },
+    { term: '卸载应用残留', desc: '卸载应用后遗留在磁盘上的数据文件（卸载不彻底留下的"尸体"）。清理后可释放空间。' },
     { term: '孤儿目录', desc: '找不到所属应用的残留目录（应用已卸载，目录还在）。' },
     { term: '@appshare', desc: '应用共享数据目录，多个应用可以共用。本工具按符号链接识别归属，避免误删在用应用的共享数据。' },
     { term: 'TMP', desc: '系统临时目录（/tmp 等），程序运行产生的临时文件。超过 24 小时未使用的可以安全清理。' },
@@ -1254,7 +1254,7 @@ const GLOSSARY = [
   ]},
   { group: '技术术语', items: [
     { term: 'Docker', desc: '容器技术，把应用连同依赖打包运行，互不影响。飞牛商店里的 Docker 应用都用它运行。' },
-    { term: '去重 / SHA-256', desc: '用"文件指纹"（SHA-256 哈希）比对文件内容，找出内容完全相同的重复文件，删除多余副本释放空间。' },
+    { term: '重复文件去重 / SHA-256', desc: '用"文件指纹"（SHA-256 哈希）比对文件内容，找出内容完全相同的重复文件，删除多余副本释放空间。' },
     { term: 'ID3 / FLAC', desc: '音乐文件的元数据标签（歌名/歌手/专辑等信息）。音乐去重根据这些标签辅助识别重复歌曲。' },
     { term: '定时清理', desc: '按设定时间自动执行清理并生成报告，不用手动操作。' },
     { term: '风险分级', desc: '按清理操作的危险程度分低/中/高三档：低风险可放心清理（会自动重建），高风险（如删应用数据）需勾选确认。' },

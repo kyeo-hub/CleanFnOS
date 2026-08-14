@@ -14,19 +14,19 @@
     <span id="version" class="badge">v-</span>
   </header>
   <nav class="tabs">
-    <button id="tab-scan" class="tab active" data-tab="scan">残留扫描</button>
-    <button id="tab-netdisk" class="tab" data-tab="netdisk">网盘残余</button>
-    <button id="tab-docker" class="tab" data-tab="docker">Docker</button>
-    <button id="tab-tmp" class="tab" data-tab="tmp">tmp 清理</button>
+    <button id="tab-scan" class="tab active" data-tab="scan">卸载应用残留</button>
+    <button id="tab-netdisk" class="tab" data-tab="netdisk">网盘挂载残余</button>
+    <button id="tab-docker" class="tab" data-tab="docker">Docker 清理</button>
+    <button id="tab-tmp" class="tab" data-tab="tmp">临时文件清理</button>
     <button id="tab-trash" class="tab" data-tab="trash">回收站 <span id="trash-count" class="count"></span></button>
     <button id="tab-sys-trash" class="tab" data-tab="sys-trash">系统回收站</button>
-    <button id="tab-empty" class="tab" data-tab="empty">空目录</button>
-    <button id="tab-dup" class="tab" data-tab="dup">去重</button>
-    <button id="tab-bigfiles" class="tab" data-tab="bigfiles">大文件</button>
-    <button id="tab-sysclean" class="tab" data-tab="sysclean">系统清理</button>
+    <button id="tab-empty" class="tab" data-tab="empty">空目录清理</button>
+    <button id="tab-dup" class="tab" data-tab="dup">重复文件去重</button>
+    <button id="tab-bigfiles" class="tab" data-tab="bigfiles">大文件查找</button>
+    <button id="tab-sysclean" class="tab" data-tab="sysclean">系统缓存清理</button>
     <button id="tab-schedule" class="tab" data-tab="schedule">定时清理</button>
-    <button id="tab-kvm" class="tab" data-tab="kvm">KVM</button>
-    <button id="tab-notify" class="tab" data-tab="notify">通知</button>
+    <button id="tab-kvm" class="tab" data-tab="kvm">虚拟机 (KVM)</button>
+    <button id="tab-notify" class="tab" data-tab="notify">通知推送</button>
   </nav>
   <div class="sidebar-foot">
     <button id="btn-passwd" class="plain" title="修改访问密码">🔑 改密码</button>
@@ -51,37 +51,37 @@
 
     <div class="stats">
       <div class="stat"><b id="stat-apps">-</b><span>已安装应用</span></div>
-      <div class="stat"><b id="stat-orphans">-</b><span>残留应用</span></div>
+      <div class="stat"><b id="stat-orphans">-</b><span>残留应用数</span></div>
       <div class="stat"><b id="stat-size">-</b><span>占用空间</span></div>
-      <div class="stat"><b id="stat-links">-</b><span>链接残留</span></div>
-      <div class="stat"><b id="stat-users">-</b><span>残留用户</span></div>
+      <div class="stat"><b id="stat-links">-</b><span>链接残留数</span></div>
+      <div class="stat"><b id="stat-users">-</b><span>残留用户数</span></div>
     </div>
 
-    <h2>残留目录 <span class="hint">（按应用聚合，@appshare 按符号链接归属识别，杜绝误报）</span></h2>
+    <h2>卸载应用残留目录 <span class="hint">（按应用聚合，@appshare 按符号链接归属识别，杜绝误报）</span></h2>
     <div class="table-wrap">
       <table id="tbl-orphans">
         <thead><tr><th><input type="checkbox" id="chk-all"></th><th>应用</th><th>残留位置</th><th>大小</th><th>风险</th></tr></thead>
         <tbody></tbody>
       </table>
-      <div id="no-orphans" class="empty">✅ 未发现残留目录</div>
+      <div id="no-orphans" class="empty">✅ 未发现卸载应用残留目录</div>
     </div>
 
-    <h2>链接残留 <span class="hint">（/usr/local 等目录下指向已卸载应用的符号链接）</span></h2>
+    <h2>卸载应用链接残留 <span class="hint">（/usr/local 等目录下指向已卸载应用的符号链接）</span></h2>
     <div class="table-wrap">
       <table id="tbl-links">
         <thead><tr><th><input type="checkbox" id="chk-all-links"></th><th>链接路径</th><th>指向</th><th>对应应用</th></tr></thead>
         <tbody></tbody>
       </table>
-      <div id="no-links" class="empty">✅ 未发现链接残留</div>
+      <div id="no-links" class="empty">✅ 未发现卸载应用链接残留</div>
     </div>
 
-    <h2>残留系统用户 <span class="hint">（docker- 前缀且对应应用已卸载）</span></h2>
+    <h2>卸载应用残留用户 <span class="hint">（docker- 前缀且对应应用已卸载）</span></h2>
     <div class="table-wrap">
       <table id="tbl-users">
         <thead><tr><th><input type="checkbox" id="chk-all-users"></th><th>用户名</th><th>对应应用</th></tr></thead>
         <tbody></tbody>
       </table>
-      <div id="no-users" class="empty">✅ 未发现残留用户</div>
+      <div id="no-users" class="empty">✅ 未发现卸载应用残留用户</div>
     </div>
   </section>
 
@@ -314,7 +314,7 @@
   <!-- ============ KVM 页 ============ -->
   <section id="view-kvm" class="view">
     <div class="toolbar">
-      <button id="btn-kvm-scan" class="primary">🔄 扫描 KVM</button>
+      <button id="btn-kvm-scan" class="primary">🔄 扫描虚拟机</button>
       <span id="kvm-status" class="status"></span>
       <span class="spacer"></span>
       <button id="btn-kvm-delete" class="danger" disabled>🗑 删除选中鬼影快照</button>
@@ -325,7 +325,7 @@
         <thead><tr><th>名称</th><th>状态</th><th>磁盘</th><th>操作</th></tr></thead>
         <tbody></tbody>
       </table>
-      <div id="no-kvm-vms" class="empty">ℹ️ 未发现 KVM 虚拟机</div>
+      <div id="no-kvm-vms" class="empty">ℹ️ 未发现虚拟机</div>
     </div>
     <h2>鬼影快照 <span class="hint">（virsh 不可见但 qcow2 实际占用空间）</span></h2>
     <div class="table-wrap">

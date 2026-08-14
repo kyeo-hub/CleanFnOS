@@ -5,3 +5,4 @@ fpk.json
 # 本地运行产物
 var/
 *.log
+backup_pre_reinstall_*/
