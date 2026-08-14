@@ -1,13 +1,31 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
-  <!-- 背景圆角方块（品牌深蓝） -->
-  <rect x="8" y="8" width="240" height="240" rx="48" fill="#0f172a"/>
-  <!-- 垃圾桶主体 -->
-  <rect x="66" y="78" width="124" height="132" rx="14" fill="#e2e8f0"/>
-  <rect x="56" y="60" width="144" height="26" rx="8" fill="#38bdf8"/>
-  <rect x="92" y="50" width="72" height="18" rx="6" fill="#38bdf8"/>
-  <!-- 垃圾桶条纹 -->
-  <rect x="66" y="110" width="124" height="12" rx="6" fill="#94a3b8"/>
-  <rect x="66" y="136" width="124" height="12" rx="6" fill="#94a3b8"/>
-  <!-- 清除符号（对勾） -->
-  <path d="M96 168 l22 22 l44 -52" fill="none" stroke="#22c55e" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+  <defs>
+    <!-- 清新背景渐变：薄荷绿 → 天蓝 -->
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#34d399"/>
+      <stop offset="1" stop-color="#38bdf8"/>
+    </linearGradient>
+    <!-- 对勾渐变：青 → 绿 -->
+    <linearGradient id="ck" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#10b981"/>
+      <stop offset="1" stop-color="#059669"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 背景圆角方块（清新渐变） -->
+  <rect x="8" y="8" width="240" height="240" rx="52" fill="url(#bg)"/>
+
+  <!-- 大白色气泡（清洁感） -->
+  <circle cx="128" cy="120" r="76" fill="#ffffff" opacity="0.96"/>
+
+  <!-- 气泡高光 -->
+  <ellipse cx="100" cy="86" rx="34" ry="20" fill="#ffffff" opacity="0.7" transform="rotate(-18 100 86)"/>
+
+  <!-- 对勾（清理完成） -->
+  <path d="M88 128 l28 28 l56 -62" fill="none" stroke="url(#ck)" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- 顶部小泡泡点缀 -->
+  <circle cx="52" cy="52" r="12" fill="#ffffff" opacity="0.85"/>
+  <circle cx="206" cy="66" r="9" fill="#ffffff" opacity="0.75"/>
+  <circle cx="196" cy="198" r="7" fill="#ffffff" opacity="0.7"/>
 </svg>

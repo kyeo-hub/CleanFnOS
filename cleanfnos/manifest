@@ -10,6 +10,7 @@ maintainer_url        = https://atomgit.com
 distributor           = AtomCode
 distributor_url       = https://atomgit.com
 os_min_version        = 0.8.25
+changelog             = v1.5.0：新增通知推送（Bark/钉钉/飞书/企业微信/Telegram/Webhook，SSRF 防护），定时清理完成后自动推送报告；统一网关接入（登录飞牛免密，token 兜底）；名词解释、UI 风格优化。v1.4.0：KVM 鬼影快照检测与删除、虚拟机启停管理、明暗主题、移动端适配。v1.3.0：文件/音乐去重、大文件查找、系统缓存清理 17 项、定时清理计划与报告。v1.2.0：网盘挂载残余、Docker 清理、临时文件清理、系统回收站分级、空目录清理。v1.1.0：应用残留/链接残留/残留用户清理、风险分级确认、卸载自我清理。
 desktop_uidir         = ui
 desktop_applaunchname = cleanfnos.Application
 ctl_stop              = true
