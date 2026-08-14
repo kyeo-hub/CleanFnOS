@@ -1,12 +1,13 @@
 {
     ".url": {
         "cleanfnos.Application": {
-            "title": "CleanFnOS 残留清理",
+            "title": "CleanFnOS 系统清理",
             "icon": "images/icon_{0}.png",
             "type": "iframe",
-            "protocol": "http",
-            "port": "${wizard_app_port}",
-            "url": "/",
+            "protocol": "",
+            "gatewaySocket": "cleanfnos.sock",
+            "gatewayPrefix": "/app/cleanfnos",
+            "url": "/app/cleanfnos",
             "allUsers": true
         }
     }

@@ -71,7 +71,10 @@ start_process() {
     cleanup_port
     sleep 0.3
     # exec node so the PID recorded is the actual node process
-    PORT="${PORT}" bash -c "exec ${CMD}" >> "${LOG_FILE}" 2>&1 &
+    # 统一网关（fnOS 1.2.0401+）：注入 unix socket 路径与前缀，登录飞牛后免密访问
+    GATEWAY_SOCKET="${TRIM_APPDEST}/cleanfnos.sock"
+    rm -f "${GATEWAY_SOCKET}" 2>/dev/null || true
+    PORT="${PORT}" GATEWAY_SOCKET="${GATEWAY_SOCKET}" GATEWAY_PREFIX="/app/cleanfnos" bash -c "exec ${CMD}" >> "${LOG_FILE}" 2>&1 &
     local pid=$!
     printf "%s" "${pid}" > "${PID_FILE}"
     log_msg "pid=${pid}"

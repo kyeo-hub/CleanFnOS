@@ -57,9 +57,17 @@ function loadAuthToken() {
 }
 loadAuthToken();
 
+// 统一网关（fnOS 1.2.0401+）：GATEWAY_SOCKET 注入 unix socket 路径，GATEWAY_PREFIX 为 /app/cleanfnos
+const GATEWAY_SOCKET = process.env.GATEWAY_SOCKET || '';
+const GATEWAY_PREFIX = process.env.GATEWAY_PREFIX || '';
+
 function checkAuth(req) {
-  // 统一网关模式：fnOS 网关以 loopback 代理注入 X-Trim-Userid，仅在来源为本机时信任
-  // （参考 fnos-logmanager：远端客户端可伪造该头，非 loopback 一律忽略）
+  // 统一网关模式：请求经 fnOS 网关代理（unix socket）转发，网关注入 X-Trim-Userid 登录态。
+  // unix socket 仅本机进程可达（nginx 网关注入），故来自 socket 的 X-Trim-Userid 可信；
+  // 无论来源如何，token（X-Auth-Token）始终作为兜底鉴权。
+  if (req.fromGatewaySocket && req.headers['x-trim-userid']) {
+    return true;
+  }
   const isLoopback = (() => {
     const addr = req.socket && req.socket.remoteAddress;
     return addr === '127.0.0.1' || addr === '::1' || addr === '::ffff:127.0.0.1';
@@ -144,7 +152,12 @@ function auditLog(type, detail) {
 
 // ---------------- HTTP 路由 ----------------
 
-const server = http.createServer(async (req, res) => {
+/** 统一请求处理器：网关模式先剥离 /app/cleanfnos 前缀，再按路径路由 */
+async function handleRequest(req, res) {
+  // 统一网关：nginx 把 /app/cleanfnos/xxx 原样转发到 unix socket，需剥离前缀
+  if (GATEWAY_PREFIX && req.url && req.url.startsWith(GATEWAY_PREFIX)) {
+    req.url = req.url.slice(GATEWAY_PREFIX.length) || '/';
+  }
   const url = new URL(req.url, `http://127.0.0.1:${PORT}`);
   const p = url.pathname;
   const method = req.method;
@@ -498,7 +511,7 @@ const server = http.createServer(async (req, res) => {
     try { fs.appendFileSync(path.join(VAR_DIR, 'info.log'), `${new Date().toISOString()} [server-error] ${String(e && e.stack || e)}\n`); } catch (e2) { /* 忽略 */ }
     sendJSON(res, 500, { success: false, error: 'internal error' });
   }
-});
+}
 
 // 初始化定时清理（注入数据目录与 api 模块引用）
 scheduleApi.initSchedule(VAR_DIR, {
@@ -512,6 +525,34 @@ scheduleApi.initSchedule(VAR_DIR, {
 
 // 初始化通知配置（注入数据目录）
 notifyApi.initNotify(VAR_DIR);
+
+// ---- 双监听：TCP 端口（保留 token 兜底）+ 统一网关 unix socket（登录免密） ----
+
+// TCP 服务（直连端口场景，仍需 token 鉴权）
+const server = http.createServer((req, res) => {
+  handleRequest(req, res).catch((e) => {
+    try { sendJSON(res, 500, { success: false, error: 'internal error' }); } catch (e2) { /* 忽略 */ }
+  });
+});
+
+// 统一网关服务（fnOS 1.2.0401+）：监听 unix socket，网关注入 X-Trim-Userid 后免密
+if (GATEWAY_SOCKET) {
+  try {
+    if (fs.existsSync(GATEWAY_SOCKET)) fs.unlinkSync(GATEWAY_SOCKET);
+    const gwServer = http.createServer((req, res) => {
+      req.fromGatewaySocket = true; // 标记来源：unix socket 仅本机网关注入，信任 X-Trim-Userid
+      handleRequest(req, res).catch((e) => {
+        try { sendJSON(res, 500, { success: false, error: 'internal error' }); } catch (e2) { /* 忽略 */ }
+      });
+    });
+    gwServer.listen(GATEWAY_SOCKET, () => {
+      try { fs.chmodSync(GATEWAY_SOCKET, 0o660); } catch (e) { /* 权限设置失败忽略 */ }
+      console.log(`CleanFnOS gateway socket listening on ${GATEWAY_SOCKET}`);
+    });
+  } catch (e) {
+    console.error('CleanFnOS gateway socket failed: ' + String(e && e.message || e));
+  }
+}
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`CleanFnOS server listening on http://0.0.0.0:${PORT} (v${VERSION})`);
