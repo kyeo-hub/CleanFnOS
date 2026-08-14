@@ -73,7 +73,8 @@ function askToken() {
   return new Promise((resolve) => {
     $('modal-title').textContent = '🔑 需要访问密码';
     $('modal-text').innerHTML = `
-      <div>请输入安装时设置的访问密码。忘记的话可在 <code>/var/apps/cleanfnos/etc/config.conf</code> 的 auth_token 查看或修改：</div>
+      <div style="margin-bottom:8px">请输入<b>访问密码</b>（安装向导中设置，用于保护局域网直连访问）。</div>
+      <div class="hint" style="margin-bottom:10px">忘记密码？在飞牛 SSH 终端执行 <code>cat /var/apps/cleanfnos/etc/config.conf</code> 查看 <code>auth_token</code> 行；登录后可用右上角「🔑 改密码」修改。</div>
       <input id="token-input" type="password" style="width:100%;margin-top:10px;padding:8px;border-radius:6px;border:1px solid var(--border);background:var(--panel2);color:var(--text)" placeholder="输入访问密码" autocomplete="off">
     `;
     $('modal-ok').textContent = '保存';
