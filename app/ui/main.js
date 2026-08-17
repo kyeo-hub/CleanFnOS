@@ -1276,6 +1276,37 @@ function showGlossary() {
 }
 $('glossary-close').addEventListener('click', () => $('modal-glossary').classList.add('hidden'));
 
+/* ---------- 名词悬停 tooltip ---------- */
+(function initTip() {
+  const popup = document.createElement('div');
+  popup.id = 'tip-popup';
+  document.body.appendChild(popup);
+  const find = (term) => {
+    for (const g of GLOSSARY) {
+      const it = g.items.find((i) => i.term === term);
+      if (it) return it;
+    }
+    return null;
+  };
+  document.addEventListener('mouseover', (e) => {
+    const el = e.target.closest('.tip');
+    if (!el) { popup.classList.remove('show'); return; }
+    const it = find(el.dataset.term);
+    if (!it) { popup.classList.remove('show'); return; }
+    popup.innerHTML = `<b>${esc(it.term)}</b>${esc(it.desc)}`;
+    popup.classList.add('show');
+    const r = el.getBoundingClientRect();
+    const pw = popup.offsetWidth, ph = popup.offsetHeight;
+    let x = r.left + r.width / 2 - pw / 2;
+    let y = r.top - ph - 8;
+    if (y < 4) y = r.bottom + 8;                       // 上方放不下则放下方
+    if (x < 4) x = 4;
+    if (x + pw > window.innerWidth - 4) x = window.innerWidth - pw - 4;
+    popup.style.left = x + 'px';
+    popup.style.top = y + 'px';
+  });
+})();
+
 /* ---------- Tab 切换 ---------- */
 document.querySelectorAll('.tab').forEach((b) => {
   b.addEventListener('click', () => {

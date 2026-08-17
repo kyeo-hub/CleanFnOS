@@ -158,6 +158,31 @@ tbody tr:nth-child(even):hover { background: rgba(56, 189, 248, .07); }
 .risk-high { background: rgba(239,68,68,.18); color: #f87171; }
 .empty { padding: 24px; text-align: center; color: var(--muted); font-size: 13px; }
 
+/* ---------- 名词悬停解释 tooltip ---------- */
+.tip {
+  position: relative;
+  border-bottom: 1px dashed var(--accent);
+  cursor: help;
+  color: var(--accent);
+  display: inline-block;
+}
+#tip-popup {
+  position: fixed; z-index: 9999;
+  max-width: 300px;
+  background: var(--panel2);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12px; line-height: 1.5;
+  color: var(--text);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .35);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .12s;
+}
+#tip-popup.show { opacity: 1; }
+#tip-popup b { display: block; color: var(--accent); margin-bottom: 3px; font-size: 12px; }
+
 .toast {
   position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(80px);
   background: var(--panel); border: 1px solid var(--border); border-radius: 10px;

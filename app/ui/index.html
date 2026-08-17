@@ -15,16 +15,16 @@
   </header>
   <nav class="tabs">
     <button id="tab-scan" class="tab active" data-tab="scan">卸载应用残留</button>
-    <button id="tab-netdisk" class="tab" data-tab="netdisk">网盘挂载残余</button>
+    <button id="tab-netdisk" class="tab" data-tab="netdisk"><span class="tip" data-term="网盘挂载">网盘挂载</span>残余</button>
     <button id="tab-docker" class="tab" data-tab="docker">Docker 清理</button>
     <button id="tab-tmp" class="tab" data-tab="tmp">临时文件清理</button>
-    <button id="tab-trash" class="tab" data-tab="trash">回收站 <span id="trash-count" class="count"></span></button>
+    <button id="tab-trash" class="tab" data-tab="trash"><span class="tip" data-term="回收站">回收站</span> <span id="trash-count" class="count"></span></button>
     <button id="tab-sys-trash" class="tab" data-tab="sys-trash">系统回收站</button>
     <button id="tab-empty" class="tab" data-tab="empty">空目录清理</button>
     <button id="tab-dup" class="tab" data-tab="dup">重复文件去重</button>
     <button id="tab-bigfiles" class="tab" data-tab="bigfiles">大文件查找</button>
     <button id="tab-sysclean" class="tab" data-tab="sysclean">系统缓存清理</button>
-    <button id="tab-schedule" class="tab" data-tab="schedule">定时清理</button>
+    <button id="tab-schedule" class="tab" data-tab="schedule"><span class="tip" data-term="定时清理">定时清理</span></button>
     <button id="tab-kvm" class="tab" data-tab="kvm">虚拟机 (KVM)</button>
     <button id="tab-notify" class="tab" data-tab="notify">通知推送</button>
   </nav>
@@ -43,7 +43,7 @@
       <span id="scan-status" class="status"></span>
       <span class="spacer"></span>
       <select id="del-mode" title="删除方式">
-        <option value="trash">移入回收站（可恢复）</option>
+        <option value="trash">移入<span class="tip" data-term="回收站">回收站</span>（可恢复）</option>
         <option value="permanent">永久删除（不可恢复）</option>
       </select>
       <button id="btn-delete" class="danger" disabled>🗑 清理选中项</button>
@@ -57,7 +57,7 @@
       <div class="stat"><b id="stat-users">-</b><span>残留用户数</span></div>
     </div>
 
-    <h2>卸载应用残留目录 <span class="hint">（按应用聚合，@appshare 按符号链接归属识别，杜绝误报）</span></h2>
+    <h2>卸载应用残留目录 <span class="hint">（按应用聚合，<span class="tip" data-term="@appshare">@appshare</span> 按符号链接归属识别，杜绝误报）</span></h2>
     <div class="table-wrap">
       <table id="tbl-orphans">
         <thead><tr><th><input type="checkbox" id="chk-all"></th><th>应用</th><th>残留位置</th><th>大小</th><th>风险</th></tr></thead>
@@ -124,7 +124,7 @@
       <button id="btn-docker-scan" class="primary">🔄 扫描 Docker</button>
       <span id="docker-status" class="status"></span>
       <span class="spacer"></span>
-      <label><input type="checkbox" id="docker-buildcache"> 清理 Build Cache</label>
+      <label><input type="checkbox" id="docker-buildcache"> 清理 <span class="tip" data-term="Build Cache">Build Cache</span></label>
       <button id="btn-docker-delete" class="danger" disabled>🗑 清理选中项</button>
     </div>
     <h2>已停止容器 <span class="hint">（可安全删除）</span></h2>
@@ -151,7 +151,7 @@
       </table>
       <div id="no-dn" class="empty">✅ 无未用自定义网络</div>
     </div>
-    <h2>Dangling 镜像 <span class="hint">（无标签悬空镜像）</span></h2>
+    <h2><span class="tip" data-term="Dangling 镜像">Dangling 镜像</span> <span class="hint">（无标签悬空镜像）</span></h2>
     <div class="table-wrap">
       <table id="tbl-docker-images">
         <thead><tr><th><input type="checkbox" id="chk-all-di"></th><th>镜像 ID</th><th>大小</th></tr></thead>
@@ -232,7 +232,7 @@
       <span class="spacer"></span>
       <button id="btn-dup-delete" class="danger" disabled>🗑 删除选中副本</button>
     </div>
-    <p class="hint">按文件大小分组后对同大小文件做 SHA-256 流式哈希，识别重复文件。删除默认移入回收站（每个重复组保留第一个）。</p>
+    <p class="hint">按文件大小分组后对同大小文件做 <span class="tip" data-term="重复文件去重 / SHA-256">SHA-256</span> 流式哈希，识别重复文件。删除默认移入回收站（每个重复组保留第一个）。</p>
     <div id="dup-stats" class="stats" style="display:none">
       <div class="stat"><b id="dup-stat-files">-</b><span>扫描文件</span></div>
       <div class="stat"><b id="dup-stat-groups">-</b><span>重复组</span></div>
@@ -319,7 +319,7 @@
       <span class="spacer"></span>
       <button id="btn-kvm-delete" class="danger" disabled>🗑 删除选中鬼影快照</button>
     </div>
-    <h2>虚拟机列表</h2>
+    <h2><span class="tip" data-term="虚拟机">虚拟机</span>列表</h2>
     <div class="table-wrap">
       <table id="tbl-kvm-vms">
         <thead><tr><th>名称</th><th>状态</th><th>磁盘</th><th>操作</th></tr></thead>
@@ -327,7 +327,7 @@
       </table>
       <div id="no-kvm-vms" class="empty">ℹ️ 未发现虚拟机</div>
     </div>
-    <h2>鬼影快照 <span class="hint">（virsh 不可见但 qcow2 实际占用空间）</span></h2>
+    <h2><span class="tip" data-term="鬼影快照">鬼影快照</span> <span class="hint">（virsh 不可见但 qcow2 实际占用空间）</span></h2>
     <div class="table-wrap">
       <table id="tbl-kvm-ghosts">
         <thead><tr><th><input type="checkbox" id="chk-all-kvm"></th><th>所属 VM</th><th>快照名</th><th>大小</th><th>创建时间</th></tr></thead>
