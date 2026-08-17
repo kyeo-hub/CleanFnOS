@@ -35,11 +35,11 @@ function applyTheme(theme) {
 applyTheme(localStorage.getItem(THEME_KEY) === 'light' ? 'light' : 'dark');
 
 /* ---------- 工具 ---------- */
-function toast(msg, ok = true) {
+function toast(msg, ok = true, duration = 3000) {
   const t = $('toast');
   t.textContent = msg;
   t.className = 'toast show ' + (ok ? 'ok' : 'err');
-  setTimeout(() => { t.className = 'toast'; }, 3000);
+  setTimeout(() => { t.className = 'toast'; }, duration);
 }
 
 function esc(s) {
@@ -112,6 +112,7 @@ function confirmDialog(title, text, okLabel, cb, requireAck = false) {
   $('modal-title').textContent = title;
   $('modal-text').innerHTML = text +
     (requireAck ? `<div style="margin-top:12px;padding:10px;border:1px solid var(--danger);border-radius:8px;background:rgba(239,68,68,.08)">
+      <div style="font-size:12px;color:#d33;margin-bottom:8px">⚠️ 免责声明：本工具为个人使用非商业化运行，清除操作存在风险，因使用本工具造成任何数据丢失，本工具概不负责。</div>
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text)">
         <input type="checkbox" id="ack-irreversible"> <b style="color:#d33">我已知晓此操作不可恢复</b>
       </label></div>` : '');
@@ -1342,4 +1343,5 @@ document.querySelectorAll('.tab').forEach((b) => {
     applyTheme(document.body.classList.contains('light') ? 'dark' : 'light');
   });
   doScan();
+  toast('⚠️ 免责声明：本工具为个人使用非商业化运行，清理有风险，请谨慎使用，因使用造成的任何数据丢失本工具概不负责。', true, 6000);
 })();

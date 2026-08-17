@@ -1,5 +1,7 @@
 # CleanFnOS — 飞牛 fnOS 综合清理工具
 
+> ⚠️ **免责声明**：本工具为个人使用而开发，**非商业化运行**；清理功能设计不尽全面，清除操作存在风险，**请谨慎使用**！因使用本工具造成任何数据丢失，本工具概不负责。使用前建议对重要数据做好备份。
+
 零依赖 Node.js 实现的飞牛 fnOS 清理应用。在「应用残留清理」核心之上，综合吸收了社区工具
 [fnclearup（清理精灵）](https://github.com/Wyf841015/FnDepot)、fnos-app-cleaner、
 [fnos-logmanager](https://github.com/sushazhi/fnos-logmanager) 的成熟功能，并保留差异化优势：

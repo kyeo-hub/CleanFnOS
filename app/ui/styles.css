@@ -115,6 +115,19 @@ input[type="text"], input[type="password"], input[type="number"] { transition: b
 input[type="text"]:focus, input[type="password"]:focus, input[type="number"]:focus,
 select:focus { outline: none; border-color: var(--accent); }
 
+/* ---------- 免责声明 ---------- */
+.disclaimer {
+  background: rgba(245, 158, 11, .12);
+  border: 1px solid rgba(245, 158, 11, .45);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin: 0 0 16px;
+  font-size: 12.5px; line-height: 1.6;
+}
+.disclaimer b { color: #f59e0b; }
+body.light .disclaimer b { color: #b45309; }
+
 .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
 .stat {
   background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
