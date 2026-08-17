@@ -4,10 +4,9 @@
             "title": "CleanFnOS 系统清理",
             "icon": "images/icon_{0}.png",
             "type": "iframe",
-            "protocol": "",
-            "gatewaySocket": "cleanfnos.sock",
-            "gatewayPrefix": "/app/cleanfnos",
-            "url": "/app/cleanfnos",
+            "protocol": "http",
+            "port": "${wizard_app_port}",
+            "url": "/",
             "allUsers": true
         }
     }
