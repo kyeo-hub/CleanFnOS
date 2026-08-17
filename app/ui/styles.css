@@ -73,6 +73,8 @@ body {
   content: ''; position: absolute; left: -12px; top: 50%; transform: translateY(-50%);
   width: 4px; height: 60%; border-radius: 0 4px 4px 0; background: var(--accent);
 }
+/* 选中 tab 内的名词提示跟随 tab 文字色，避免 accent 色字叠 accent 色背景看不清 */
+.tab.active .tip { color: inherit; border-bottom-color: currentColor; }
 .count { font-size: 12px; opacity: .8; }
 
 .sidebar-foot {
