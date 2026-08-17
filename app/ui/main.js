@@ -756,7 +756,7 @@ async function scanDup() {
 }
 
 function renderDup(stats) {
-  $('dup-stats').style.display = 'block';
+  $('dup-stats').style.display = 'grid';
   $('dup-stat-files').textContent = stats.totalFiles || 0;
   $('dup-stat-groups').textContent = stats.duplicateGroups || 0;
   $('dup-stat-dup').textContent = stats.duplicateFiles || 0;
