@@ -1,5 +1,5 @@
 appname               = cleanfnos
-version               = 1.6.4
+version               = 1.6.5
 display_name          = CleanFnOS 系统清理
 desc                  = 飞牛 fnOS 综合清理工具：卸载应用残留（@appdata/@appconf/@apphome/@apptemp/@appmeta/@appshare 及 /usr/local 链接、docker- 系统用户，@appshare 按符号链接归属识别零误报）、网盘挂载残余、Docker 清理（容器/卷/网络/镜像/BuildCache）、临时文件清理、系统回收站分级、空目录清理、重复文件/音乐去重、大文件查找、系统缓存清理（apt/npm/pip/uv/浏览器/日志）、虚拟机 (KVM) 鬼影快照检测与 VM 管理、定时清理计划与通知推送（Bark/钉钉/飞书/企业微信/Telegram）。删除默认移入回收站可恢复，高风险操作需勾选确认，操作留审计日志，支持明暗主题与移动端。
 arch                  = x86_64
@@ -10,7 +10,7 @@ maintainer_url        = https://github.com/kyeo-hub/CleanFnOS
 distributor           = 集家嘴的壳玛🐸
 distributor_url       = https://github.com/kyeo-hub/CleanFnOS
 os_min_version        = 0.8.25
-changelog             = v1.6.4：桌面入口改回直连端口模式（修复统一网关模式下 nginx trim_http_cgi 对静态资源返回 invalid token 导致的样式丢失/图标不刷新）。v1.6.3：移除静态资源 ?v= 版本参数（nginx 网关对带 query 的静态请求处理异常导致 404；server.js 已带 no-cache 无需版本参数）。v1.6.2：修复应用内样式/图标不刷新（index.html 静态资源加版本参数 cache-busting，重发双架构包）。v1.6.1：修复安装失败（install_callback 日志写入目录不存在导致 set -e 中止，改为先建目录并容错）。v1.6.0：GitHub Actions 双架构自动构建与发布（x86/arm64）、仓库目录扁平化、维护者信息更新。v1.5.0：新增通知推送（Bark/钉钉/飞书/企业微信/Telegram/Webhook，SSRF 防护），定时清理完成后自动推送报告；统一网关接入（登录飞牛免密，token 兜底）；名词解释、UI 风格优化。v1.4.0：KVM 鬼影快照检测与删除、虚拟机启停管理、明暗主题、移动端适配。v1.3.0：文件/音乐去重、大文件查找、系统缓存清理 17 项、定时清理计划与报告。v1.2.0：网盘挂载残余、Docker 清理、临时文件清理、系统回收站分级、空目录清理。v1.1.0：应用残留/链接残留/残留用户清理、风险分级确认、卸载自我清理。
+changelog             = v1.6.5：名词解释全面悬停化——悬停标记扩展至 22 处覆盖全部术语（新增 KVM/快照/卸载应用残留/TMP/Docker/ID3/FLAC/风险分级等），移除独立名词解释弹窗页。v1.6.4：桌面入口改回直连端口模式（修复统一网关模式下 nginx trim_http_cgi 对静态资源返回 invalid token 导致的样式丢失/图标不刷新）。v1.6.3：移除静态资源 ?v= 版本参数（nginx 网关对带 query 的静态请求处理异常导致 404；server.js 已带 no-cache 无需版本参数）。v1.6.2：修复应用内样式/图标不刷新（index.html 静态资源加版本参数 cache-busting，重发双架构包）。v1.6.1：修复安装失败（install_callback 日志写入目录不存在导致 set -e 中止，改为先建目录并容错）。v1.6.0：GitHub Actions 双架构自动构建与发布（x86/arm64）、仓库目录扁平化、维护者信息更新。v1.5.0：新增通知推送（Bark/钉钉/飞书/企业微信/Telegram/Webhook，SSRF 防护），定时清理完成后自动推送报告；统一网关接入（登录飞牛免密，token 兜底）；名词解释、UI 风格优化。v1.4.0：KVM 鬼影快照检测与删除、虚拟机启停管理、明暗主题、移动端适配。v1.3.0：文件/音乐去重、大文件查找、系统缓存清理 17 项、定时清理计划与报告。v1.2.0：网盘挂载残余、Docker 清理、临时文件清理、系统回收站分级、空目录清理。v1.1.0：应用残留/链接残留/残留用户清理、风险分级确认、卸载自我清理。
 desktop_uidir         = ui
 desktop_applaunchname = cleanfnos.Application
 ctl_stop              = true
