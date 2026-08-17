@@ -14,23 +14,22 @@
     <span id="version" class="badge">v-</span>
   </header>
   <nav class="tabs">
-    <button id="tab-scan" class="tab active" data-tab="scan">卸载应用残留</button>
+    <button id="tab-scan" class="tab active" data-tab="scan"><span class="tip" data-term="卸载应用残留">卸载应用残留</span></button>
     <button id="tab-netdisk" class="tab" data-tab="netdisk"><span class="tip" data-term="网盘挂载">网盘挂载</span>残余</button>
-    <button id="tab-docker" class="tab" data-tab="docker">Docker 清理</button>
-    <button id="tab-tmp" class="tab" data-tab="tmp">临时文件清理</button>
+    <button id="tab-docker" class="tab" data-tab="docker"><span class="tip" data-term="Docker">Docker</span> 清理</button>
+    <button id="tab-tmp" class="tab" data-tab="tmp"><span class="tip" data-term="TMP">临时文件清理</span></button>
     <button id="tab-trash" class="tab" data-tab="trash"><span class="tip" data-term="回收站">回收站</span> <span id="trash-count" class="count"></span></button>
     <button id="tab-sys-trash" class="tab" data-tab="sys-trash">系统回收站</button>
     <button id="tab-empty" class="tab" data-tab="empty">空目录清理</button>
-    <button id="tab-dup" class="tab" data-tab="dup">重复文件去重</button>
+    <button id="tab-dup" class="tab" data-tab="dup"><span class="tip" data-term="重复文件去重 / SHA-256">重复文件去重</span></button>
     <button id="tab-bigfiles" class="tab" data-tab="bigfiles">大文件查找</button>
     <button id="tab-sysclean" class="tab" data-tab="sysclean">系统缓存清理</button>
     <button id="tab-schedule" class="tab" data-tab="schedule"><span class="tip" data-term="定时清理">定时清理</span></button>
-    <button id="tab-kvm" class="tab" data-tab="kvm">虚拟机 (KVM)</button>
+    <button id="tab-kvm" class="tab" data-tab="kvm"><span class="tip" data-term="虚拟机">虚拟机</span> (<span class="tip" data-term="KVM">KVM</span>)</button>
     <button id="tab-notify" class="tab" data-tab="notify">通知推送</button>
   </nav>
   <div class="sidebar-foot">
     <button id="btn-passwd" class="plain" title="修改访问密码">🔑 改密码</button>
-    <button id="btn-glossary" class="plain" title="名词解释">📖 名词</button>
     <button id="btn-theme" class="plain" title="切换明暗主题">🌓 主题</button>
   </div>
 </aside>
@@ -60,7 +59,7 @@
     <h2>卸载应用残留目录 <span class="hint">（按应用聚合，<span class="tip" data-term="@appshare">@appshare</span> 按符号链接归属识别，杜绝误报）</span></h2>
     <div class="table-wrap">
       <table id="tbl-orphans">
-        <thead><tr><th><input type="checkbox" id="chk-all"></th><th>应用</th><th>残留位置</th><th>大小</th><th>风险</th></tr></thead>
+        <thead><tr><th><input type="checkbox" id="chk-all"></th><th>应用</th><th>残留位置</th><th>大小</th><th><span class="tip" data-term="风险分级">风险</span></th></tr></thead>
         <tbody></tbody>
       </table>
       <div id="no-orphans" class="empty">✅ 未发现卸载应用残留目录</div>
@@ -121,7 +120,7 @@
   <!-- ============ Docker 页 ============ -->
   <section id="view-docker" class="view">
     <div class="toolbar">
-      <button id="btn-docker-scan" class="primary">🔄 扫描 Docker</button>
+      <button id="btn-docker-scan" class="primary">🔄 扫描 <span class="tip" data-term="Docker">Docker</span></button>
       <span id="docker-status" class="status"></span>
       <span class="spacer"></span>
       <label><input type="checkbox" id="docker-buildcache"> 清理 <span class="tip" data-term="Build Cache">Build Cache</span></label>
@@ -169,7 +168,7 @@
       <span class="spacer"></span>
       <button id="btn-tmp-delete" class="danger" disabled>🗑 清理选中项</button>
     </div>
-    <p class="hint">扫描 /tmp 与 /var/tmp 下 24h+ 未访问的普通文件（跳过符号链接与系统关键目录）。</p>
+    <p class="hint">扫描 <span class="tip" data-term="TMP">/tmp 与 /var/tmp</span> 下 24h+ 未访问的普通文件（跳过符号链接与系统关键目录）。</p>
     <div class="table-wrap">
       <table id="tbl-tmp">
         <thead><tr><th><input type="checkbox" id="chk-all-tmp"></th><th>文件路径</th><th>大小</th><th>最后访问</th></tr></thead>
@@ -224,7 +223,7 @@
     <div class="toolbar">
       <select id="dup-type" title="扫描类型">
         <option value="files">文件去重（全部）</option>
-        <option value="music">音乐去重（音频元数据）</option>
+        <option value="music"><span class="tip" data-term="ID3 / FLAC">音乐去重</span>（音频元数据）</option>
       </select>
       <input id="dup-path" value="/vol1/1000" placeholder="扫描目录（可多个用逗号分隔）" style="width:260px;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--panel2);color:var(--text)">
       <button id="btn-dup-scan" class="primary">🔄 扫描重复</button>
@@ -269,10 +268,10 @@
       <button id="btn-sysclean-recommended" class="ok">⚡ 一键推荐清理</button>
       <button id="btn-sysclean-delete" class="danger" disabled>🗑 清理选中项</button>
     </div>
-    <p class="hint">apt/npm/pip/uv/浏览器缓存、系统日志、应用日志(>50MB) 等 17 项。低风险=可安全清理（自动重建）；清理为永久删除，操作前自动备份清单。</p>
+    <p class="hint">apt/npm/pip/uv/浏览器缓存、系统日志、应用日志(>50MB) 等 17 项。<span class="tip" data-term="风险分级">低风险</span>=可安全清理（自动重建）；清理为永久删除，操作前自动备份清单。</p>
     <div class="table-wrap">
       <table id="tbl-sysclean">
-        <thead><tr><th><input type="checkbox" id="chk-all-sysclean"></th><th>清理项</th><th>大小</th><th>风险</th><th>推荐</th></tr></thead>
+        <thead><tr><th><input type="checkbox" id="chk-all-sysclean"></th><th>清理项</th><th>大小</th><th><span class="tip" data-term="风险分级">风险</span></th><th>推荐</th></tr></thead>
         <tbody></tbody>
       </table>
       <div id="no-sysclean" class="empty">🔍 点击「扫描系统清理项」开始</div>
@@ -330,7 +329,7 @@
     <h2><span class="tip" data-term="鬼影快照">鬼影快照</span> <span class="hint">（virsh 不可见但 qcow2 实际占用空间）</span></h2>
     <div class="table-wrap">
       <table id="tbl-kvm-ghosts">
-        <thead><tr><th><input type="checkbox" id="chk-all-kvm"></th><th>所属 VM</th><th>快照名</th><th>大小</th><th>创建时间</th></tr></thead>
+        <thead><tr><th><input type="checkbox" id="chk-all-kvm"></th><th>所属 VM</th><th><span class="tip" data-term="快照">快照</span>名</th><th>大小</th><th>创建时间</th></tr></thead>
         <tbody></tbody>
       </table>
       <div id="no-kvm-ghosts" class="empty">✅ 未发现鬼影快照</div>
@@ -364,17 +363,6 @@
     <div class="modal-actions">
       <button id="modal-cancel" class="plain">取消</button>
       <button id="modal-ok" class="danger">确认</button>
-    </div>
-  </div>
-</div>
-
-<!-- 名词解释弹窗 -->
-<div id="modal-glossary" class="modal hidden">
-  <div class="modal-box glossary-box">
-    <h3>📖 名词解释 <span class="hint">（面向非专业用户）</span></h3>
-    <div id="glossary-content" class="glossary-content"></div>
-    <div class="modal-actions">
-      <button id="glossary-close" class="plain">关闭</button>
     </div>
   </div>
 </div>

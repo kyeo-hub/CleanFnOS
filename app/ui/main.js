@@ -1261,21 +1261,6 @@ const GLOSSARY = [
   ]},
 ];
 
-function showGlossary() {
-  const content = $('glossary-content');
-  content.innerHTML = GLOSSARY.map((g) => `
-    <div class="glossary-group">
-      <h4>${esc(g.group)}</h4>
-      ${g.items.map((i) => `
-        <div class="glossary-item">
-          <b>${esc(i.term)}</b>
-          <span>${esc(i.desc)}</span>
-        </div>`).join('')}
-    </div>`).join('');
-  $('modal-glossary').classList.remove('hidden');
-}
-$('glossary-close').addEventListener('click', () => $('modal-glossary').classList.add('hidden'));
-
 /* ---------- 名词悬停 tooltip ---------- */
 (function initTip() {
   const popup = document.createElement('div');
@@ -1353,7 +1338,6 @@ document.querySelectorAll('.tab').forEach((b) => {
   $('btn-notify-load').addEventListener('click', loadNotify);
   $('btn-notify-save').addEventListener('click', saveNotify);
   $('btn-passwd').addEventListener('click', showPasswdDialog);
-  $('btn-glossary').addEventListener('click', showGlossary);
   $('btn-theme').addEventListener('click', () => {
     applyTheme(document.body.classList.contains('light') ? 'dark' : 'light');
   });
