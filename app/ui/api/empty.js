@@ -72,6 +72,8 @@ function scanEmptyDirs(root, depth, out, seen) {
     if (seen.has(p)) continue;
     seen.add(p);
     if (ent.name.startsWith('@app') || ent.name.startsWith('.@#') || ent.name === 'lost+found') continue;
+    // 与 isSafeEmptyPath 白名单保持一致：docker 数据目录、应用中心下载目录不列入空目录清理
+    if (ent.name === 'docker' || ent.name === 'appcenter-downloads') continue;
     if (isMountPoint(p)) continue; // 挂载点目录不算空目录
     let sub = [];
     try { sub = fs.readdirSync(p); } catch (e) { continue; }
@@ -117,7 +119,10 @@ async function deleteEmptyDirs({ paths = [], mode = 'trash' }) {
   for (const target of paths) {
     if (!isSafeEmptyPath(target)) { failed.push(`${target} (路径不合法)`); continue; }
     let st;
-    try { st = await fsp.lstat(target); } catch (e) { failed.push(`${target} (不存在)`); continue; }
+    try { st = await fsp.lstat(target); } catch (e) {
+      if (e.code === 'ENOENT') continue; // 目标已消失（扫描后并发删除），视为已达成清理目标
+      failed.push(`${target} (不存在)`); continue;
+    }
     if (st.isSymbolicLink()) { failed.push(`${target} (符号链接，拒绝)`); continue; }
     if (!st.isDirectory()) { failed.push(`${target} (非目录，拒绝)`); continue; }
     // 再次确认是空目录
