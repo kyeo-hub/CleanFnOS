@@ -33,6 +33,7 @@ function isSafeAppPath(p) {
 function isSafeLinkPath(p) {
   return /^\/usr\/local\/(?:bin|lib|libexec|sbin|share|include)\/[^/]+$/.test(p) ||
     /^\/usr\/local\/[^/]+\/[^/]+$/.test(p) ||
+    /^\/opt\/[^/]+$/.test(p) ||        // /opt 下的一级链接（扫描 roots 含 /opt）
     /^\/opt\/[^/]+\/[^/]+$/.test(p);
 }
 

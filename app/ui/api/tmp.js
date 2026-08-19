@@ -115,7 +115,10 @@ async function deleteTmpFiles({ paths = [], mode = 'trash' }) {
   for (const target of paths) {
     if (!isSafeTmpPath(target)) { failed.push(`${target} (路径不合法)`); continue; }
     let st;
-    try { st = await fsp.lstat(target); } catch (e) { failed.push(`${target} (不存在)`); continue; }
+    try { st = await fsp.lstat(target); } catch (e) {
+      if (e.code === 'ENOENT') continue; // 目标已消失（扫描后并发删除），视为已达成清理目标
+      failed.push(`${target} (不存在)`); continue;
+    }
     if (st.isSymbolicLink()) { failed.push(`${target} (符号链接，拒绝)`); continue; }
     if (!st.isFile()) { failed.push(`${target} (非普通文件，拒绝)`); continue; }
     try {

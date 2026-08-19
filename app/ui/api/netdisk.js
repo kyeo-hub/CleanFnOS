@@ -133,7 +133,10 @@ async function deleteNetdiskItems({ paths = [], mode = 'trash' }) {
     if (mps.has(target)) { failed.push(`${target} (仍在网盘配置中，拒绝删除)`); continue; }
     if (mounted.has(target)) { failed.push(`${target} (仍在挂载中，拒绝删除)`); continue; }
     let st;
-    try { st = await fsp.lstat(target); } catch (e) { failed.push(`${target} (不存在)`); continue; }
+    try { st = await fsp.lstat(target); } catch (e) {
+      if (e.code === 'ENOENT') continue; // 目标已消失（扫描后并发删除），视为已达成清理目标
+      failed.push(`${target} (不存在)`); continue;
+    }
     if (st.isSymbolicLink()) { failed.push(`${target} (符号链接，拒绝)`); continue; }
     try {
       if (permanent) {
