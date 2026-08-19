@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="383" viewBox="0 0 900 383">
+  <defs>
+    <!-- 背景渐变：与图标一致的清新薄荷绿 → 天蓝 -->
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#34d399"/>
+      <stop offset="1" stop-color="#38bdf8"/>
+    </linearGradient>
+    <!-- 对勾渐变 -->
+    <linearGradient id="ck" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#10b981"/>
+      <stop offset="1" stop-color="#059669"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 背景 -->
+  <rect width="900" height="383" fill="url(#bg)"/>
+
+  <!-- 背景大泡泡（浅色装饰） -->
+  <circle cx="120" cy="60" r="46" fill="#ffffff" opacity="0.10"/>
+  <circle cx="820" cy="320" r="70" fill="#ffffff" opacity="0.08"/>
+  <circle cx="760" cy="60" r="26" fill="#ffffff" opacity="0.12"/>
+  <circle cx="60" cy="330" r="20" fill="#ffffff" opacity="0.14"/>
+
+  <!-- 中央图标：白色气泡 -->
+  <circle cx="240" cy="191" r="118" fill="#ffffff" opacity="0.97"/>
+  <!-- 气泡高光 -->
+  <ellipse cx="190" cy="140" rx="50" ry="29" fill="#ffffff" opacity="0.7" transform="rotate(-18 190 140)"/>
+  <!-- 对勾 -->
+  <path d="M188 200 l40 40 l78 -88" fill="none" stroke="url(#ck)" stroke-width="25" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- 主标题：仅英文 CleanFnOS（避免中文溢出） -->
+  <text x="400" y="172" font-family="Droid Sans Fallback, sans-serif" font-size="64" font-weight="bold" fill="#0f172a">CleanFnOS</text>
+
+  <!-- 副标题 -->
+  <text x="403" y="218" font-family="Droid Sans Fallback, sans-serif" font-size="26" fill="#0f172a" opacity="0.75">飞牛 fnOS 综合清理工具</text>
+
+  <!-- 功能标签（缩短，确保不超出） -->
+  <text x="403" y="264" font-family="Droid Sans Fallback, sans-serif" font-size="18" fill="#ffffff" opacity="0.92">残留清理 · Docker · 去重 · 定时清理</text>
+
+  <!-- 右侧泡泡点缀 -->
+  <circle cx="700" cy="150" r="14" fill="#ffffff" opacity="0.6"/>
+  <circle cx="742" cy="120" r="9" fill="#ffffff" opacity="0.5"/>
+  <circle cx="820" cy="200" r="11" fill="#ffffff" opacity="0.45"/>
+</svg>

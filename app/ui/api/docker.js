@@ -53,14 +53,19 @@ async function networkInUse(name) {
 async function scanNetworks() {
   const r = await run('docker', ['network', 'ls', '--format', '{{.ID}}|{{.Name}}|{{.Driver}}']);
   const networks = [];
+  const pending = [];
   for (const line of r.stdout.split('\n')) {
     const parts = line.split('|');
     if (parts.length < 3 || !parts[0] || !parts[1]) continue;
     const [id, name, driver] = parts;
     const system = SYSTEM_NETWORKS.has(name);
-    let inUse = false;
-    if (!system) inUse = await networkInUse(name);
-    networks.push({ id, name, driver, system, inUse });
+    // 非系统网络并行 inspect 是否在用（避免串行逐个等待造成长耗时）
+    if (system) networks.push({ id, name, driver, system, inUse: false });
+    else pending.push({ id, name, driver, system: false });
+  }
+  if (pending.length) {
+    const inUseFlags = await Promise.all(pending.map((n) => networkInUse(n.name)));
+    pending.forEach((n, i) => { n.inUse = inUseFlags[i]; networks.push(n); });
   }
   return networks;
 }
@@ -136,9 +141,12 @@ async function deleteDocker({ containers = [], volumes = [], networks = [], imag
   }
 
   for (const id of images) {
-    if (typeof id !== 'string' || !/^[A-Za-z0-9]{12,64}$/.test(id)) { failed.push(`镜像 ${id} (ID 不合法)`); continue; }
-    const r = await run('docker', ['rmi', id], 60000);
-    if (r.code === 0) moved.push({ type: 'image', id });
+    // 校验：接受 docker images --no-trunc 输出的 "sha256:64位hex" 或裸 64 位 hex
+    if (typeof id !== 'string' || !/^sha256:[A-Fa-f0-9]{64}$/.test(id) && !/^[A-Fa-f0-9]{64}$/.test(id)) { failed.push(`镜像 ${id} (ID 不合法)`); continue; }
+    // docker rmi 接受带/不带 sha256: 前缀；统一去掉前缀传裸 ID
+    const shortId = id.replace(/^sha256:/, '');
+    const r = await run('docker', ['rmi', shortId], 60000);
+    if (r.code === 0) moved.push({ type: 'image', id: shortId });
     else failed.push(`镜像 ${id} (${(r.stderr || '').trim() || '删除失败'})`);
   }
 

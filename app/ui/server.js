@@ -366,6 +366,17 @@ async function handleRequest(req, res) {
       return;
     }
 
+    // POST /api/dup/fingerprint —— 音乐指纹去重（Chromaprint fpcalc）
+    if (method === 'POST' && p === '/api/dup/fingerprint') {
+      const body = await readBody(req);
+      const r = await dupApi.scanMusicFingerprint({
+        paths: Array.isArray(body.paths) ? body.paths : [],
+      });
+      if (r.error) { sendJSON(res, 400, { success: false, error: r.error }); return; }
+      sendJSON(res, 200, { success: true, ...r });
+      return;
+    }
+
     // POST /api/dup/delete
     if (method === 'POST' && p === '/api/dup/delete') {
       const body = await readBody(req);
@@ -405,7 +416,9 @@ async function handleRequest(req, res) {
       const body = await readBody(req);
       const r = await syscleanApi.sysCleanDelete({ paths: Array.isArray(body.paths) ? body.paths : [] });
       auditLog('sysclean-delete', { paths: (body.paths || []).length, cleaned: r.cleaned.length, failed: r.failed.length, totalBytes: r.totalBytes });
-      sendJSON(res, 200, { success: r.failed.length === 0, cleaned: r.cleaned, failed: r.failed, totalBytes: r.totalBytes });
+      // 部分清理项失败时返回真实原因，避免前端只看到 HTTP 200
+      const failedMsg = r.failed.length ? '部分清理项失败：' + r.failed.slice(0, 5).join('；') : undefined;
+      sendJSON(res, 200, { success: r.failed.length === 0, error: failedMsg, cleaned: r.cleaned, failed: r.failed, totalBytes: r.totalBytes });
       return;
     }
 
@@ -534,6 +547,9 @@ const server = http.createServer((req, res) => {
     try { sendJSON(res, 500, { success: false, error: 'internal error' }); } catch (e2) { /* 忽略 */ }
   });
 });
+// 指纹去重/系统清理等操作可能耗时数分钟，禁用 Node 18+ 默认 300s 请求超时（否则大曲库扫描被强关）
+server.requestTimeout = 0;
+server.headersTimeout = 0;
 
 // 统一网关服务（fnOS 1.2.0401+）：监听 unix socket，网关注入 X-Trim-Userid 后免密
 if (GATEWAY_SOCKET) {
@@ -545,6 +561,8 @@ if (GATEWAY_SOCKET) {
         try { sendJSON(res, 500, { success: false, error: 'internal error' }); } catch (e2) { /* 忽略 */ }
       });
     });
+    gwServer.requestTimeout = 0;
+    gwServer.headersTimeout = 0;
     gwServer.listen(GATEWAY_SOCKET, () => {
       try { fs.chmodSync(GATEWAY_SOCKET, 0o660); } catch (e) { /* 权限设置失败忽略 */ }
       console.log(`CleanFnOS gateway socket listening on ${GATEWAY_SOCKET}`);

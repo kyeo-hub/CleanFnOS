@@ -48,7 +48,7 @@ function esc(s) {
   }[c]));
 }
 
-async function api(path, body) {
+async function api(path, body, timeoutMs = 120000) {
   const opt = body ? {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -58,9 +58,9 @@ async function api(path, body) {
     opt.headers = opt.headers || {};
     opt.headers['X-Auth-Token'] = apiToken;
   }
-  // 请求超时保护（120s，大目录扫描可能较久），防挂起
+  // 请求超时保护（默认 120s；Docker 批量删除/大目录扫描可传更长，防挂起）
   const ac = new AbortController();
-  const timer = setTimeout(() => ac.abort(), 120000);
+  const timer = setTimeout(() => ac.abort(), timeoutMs);
   opt.signal = ac.signal;
   let r;
   try {
@@ -73,7 +73,7 @@ async function api(path, body) {
   const j = await r.json().catch(() => ({}));
   if (r.status === 401 && j.code === 401) {
     await askToken();
-    return api(path, body);
+    return api(path, body, timeoutMs);
   }
   if (!j.success) throw new Error(j.error || ('HTTP ' + r.status));
   return j;
@@ -459,7 +459,7 @@ async function scanDocker() {
   $('docker-status').textContent = '扫描中…';
   $('btn-docker-scan').disabled = true;
   try {
-    const j = await api('/docker/scan', {});
+    const j = await api('/docker/scan', {}, 300000); // Docker 扫描网络 inspect 较多，给 5 分钟
     state.docker = j;
     renderDocker();
     $('docker-status').textContent = `✓ ${(j.containers || []).length} 容器 / ${(j.volumes || []).length} 卷 / ${(j.networks || []).length} 网络 / ${(j.images || []).length} 镜像 / BuildCache ${(j.buildCache && j.buildCache.size) || '0 B'}`;
@@ -538,7 +538,7 @@ $('btn-docker-delete').addEventListener('click', () => {
     `${s.containers.length} 个已停止容器、${s.volumes.length} 个未用卷、${s.networks.length} 个未用网络、${s.images.length} 个 dangling 镜像${buildCacheNote}<br><br>` +
     '<b style="color:#d33">永久删除不可恢复！</b> 确定继续吗？', '永久删除', async () => {
     try {
-      const j = await api('/docker/delete', { ...s, buildCache: $('docker-buildcache').checked });
+      const j = await api('/docker/delete', { ...s, buildCache: $('docker-buildcache').checked }, 600000); // 批量删除串行执行，给 10 分钟
       toast(`完成：${(j.moved || []).length} 项成功${(j.failed || []).length ? `，${j.failed.length} 项失败` : ''}`);
       if (j.failed && j.failed.length) toast('失败项: ' + j.failed.join('；'), false);
       await scanDocker();
@@ -742,11 +742,17 @@ async function scanDup() {
   $('dup-status').textContent = '扫描中…（大目录可能耗时）';
   $('btn-dup-scan').disabled = true;
   try {
-    const j = await api('/dup/scan', { type, paths });
+    // 音乐去重走音频指纹接口（Chromaprint，大曲库耗时长，给 600s），文件去重走哈希接口
+    const j = type === 'music'
+      ? await api('/dup/fingerprint', { paths }, 600000)
+      : await api('/dup/scan', { type, paths });
     state.dupGroups = j.groups || [];
     renderDup(j.stats || {});
-    $('dup-status').textContent = `✓ 扫描 ${(j.stats || {}).totalFiles || 0} 个文件，${state.dupGroups.length} 组重复`;
-    toast('重复文件去重完成');
+    const st = j.stats || {};
+    $('dup-status').textContent = type === 'music'
+      ? `✓ 指纹扫描 ${st.totalFiles || 0} 个音频，${st.fingerprintOk || 0} 个生成指纹${st.fingerprintFailed ? `，${st.fingerprintFailed} 个失败` : ''}，${state.dupGroups.length} 组同曲${st.waveGroups ? `（含 ${st.waveGroups} 组疑似不同混音）` : ''}`
+      : `✓ 扫描 ${st.totalFiles || 0} 个文件，${state.dupGroups.length} 组重复`;
+    toast(type === 'music' ? '音乐指纹去重完成' : '重复文件去重完成');
   } catch (e) {
     $('dup-status').textContent = '✗ 扫描失败';
     toast('扫描失败: ' + e.message, false);
@@ -765,23 +771,41 @@ function renderDup(stats) {
   const wrap = $('dup-groups-wrap');
   wrap.innerHTML = '';
   $('no-dup').style.display = state.dupGroups.length ? 'none' : 'block';
+
+  // 判断是否为音乐指纹分组（含 fingerprint 字段与 bestPath）
+  const isMusic = state.dupGroups.length > 0 && !!state.dupGroups[0].fingerprint;
+
   for (const g of state.dupGroups) {
     const card = document.createElement('div');
     card.className = 'dup-card';
+    const headId = isMusic
+      ? (g.kind === 'wave'
+        ? `疑似同曲（不同混音/母带）<b>${g.count}</b> 个版本 / 可回收 <span style="color:#fbbf24">${esc(g.wastedText)}</span>`
+        : `同曲 <b>${g.count}</b> 个版本 / 可回收 <span style="color:#4ade80">${esc(g.wastedText)}</span>`)
+      : `<b>重复组</b> ${g.count} 个文件 / 可回收 <span style="color:#4ade80">${esc(g.wastedText)}</span>`;
+    const headHash = isMusic
+      ? (g.kind === 'wave'
+        ? `<span class="sz" title="波形相似（不同混音/母带，指纹不匹配但波形相关高）">🔊 波形相似</span>`
+        : `<span class="sz" title="音频指纹">${esc((g.fingerprint || '').slice(0, 16))}…</span>`)
+      : `<span class="sz">${esc(g.hash.slice(0, 12))}…</span>`;
     card.innerHTML = `<div class="dup-head">
-        <b>重复组</b> ${g.count} 个文件 / 可回收 <span style="color:#4ade80">${esc(g.wastedText)}</span>
-        <span class="sz">${esc(g.hash.slice(0, 12))}…</span>
+        ${headId}
+        ${headHash}
         <button class="dup-select-all plain" style="float:right">全选副本</button>
       </div>
       <table class="dup-files"><tbody></tbody></table>`;
     const tb = card.querySelector('tbody');
-    g.files.forEach((f, idx) => {
+    g.files.forEach((f) => {
       const tr = document.createElement('tr');
-      const keep = idx === 0; // 每组保留第一个
+      const keep = isMusic ? !!f.isBest : (f === g.files[0]); // 音乐模式保留音质最佳；文件模式保留第一个
       const id3 = f.id3 && (f.id3.title || f.id3.artist)
         ? ` <span class="sz">[${esc(f.id3.artist || '')} - ${esc(f.id3.title || '')}${f.id3.album ? ' / ' + esc(f.id3.album) : ''}]</span>` : '';
+      const q = f.quality;
+      const qualityTxt = isMusic && q
+        ? ` <span class="sz">| ${esc(q.format)} ${esc(q.note || '')} <b>评分 ${q.score}</b>${q.fakeLossless ? ' <span style="color:#f87171">⚠假无损</span>' : ''}</span>`
+        : '';
       tr.innerHTML = `<td><input type="checkbox" class="ck-dup" ${keep ? 'disabled' : ''}></td>
-        <td>${keep ? '<span class="risk risk-low">保留</span>' : ''} <code>${esc(f.path)}</code>${id3}</td>
+        <td>${keep ? '<span class="risk risk-low">⭐保留</span>' : ''} <code>${esc(f.path)}</code>${id3}${qualityTxt}</td>
         <td class="sz">${esc(f.sizeText)}</td>`;
       tb.appendChild(tr);
       const ck = tr.querySelector('.ck-dup');
