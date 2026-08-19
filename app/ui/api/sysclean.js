@@ -258,6 +258,12 @@ async function clearDirContents(p) {
   return removed;
 }
 
+/** 清空目录内容后，尝试删除目录本体（缓存目录会自动重建）；失败（非空/占用）则保留 */
+async function clearDirFully(p) {
+  await clearDirContents(p);
+  try { await fsp.rmdir(p); return true; } catch (e) { return false; }
+}
+
 /**
  * 清理选中的系统清理项。paths 为扫描时返回的 path，必须通过白名单。
  * 缓存/日志类永久删除（自动重建），删除前备份 manifest。
@@ -284,11 +290,11 @@ async function sysCleanDelete({ paths = [] }) {
     if (st.isSymbolicLink()) { failed.push(`${target} (符号链接，拒绝)`); continue; }
     try {
       const bytes = dirSize(target);
-      // 日志类文件目标（/var/log 下的单个文件）直接删除；目录目标清空内容
+      // 日志类文件目标（/var/log 下的单个文件）直接删除；目录目标清空内容并删除目录本体
       if (st.isFile()) {
         await fsp.unlink(target);
       } else {
-        await clearDirContents(target);
+        await clearDirFully(target);
       }
       cleaned.push({ path: target, bytes });
       totalBytes += bytes;
