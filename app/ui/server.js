@@ -215,7 +215,7 @@ async function handleRequest(req, res) {
         mode,
       });
       auditLog('app-delete', { mode, paths: (body.paths || []).length, links: (body.links || []).length, users: (body.users || []).length, moved: r.moved.length, failed: r.failed.length });
-      sendJSON(res, 200, { success: r.failed.length === 0, moved: r.moved, failed: r.failed });
+      sendJSON(res, 200, { success: r.failed.length === 0, error: r.failed.length ? '部分失败：' + r.failed.slice(0, 5).join('；') : undefined, moved: r.moved, failed: r.failed });
       return;
     }
 
@@ -236,7 +236,7 @@ async function handleRequest(req, res) {
     if (method === 'POST' && p === '/api/trash/restore') {
       const body = await readBody(req);
       const r = await appApi.trashRestore(Array.isArray(body.names) ? body.names : []);
-      sendJSON(res, 200, { success: r.failed.length === 0, restored: r.restored, failed: r.failed });
+      sendJSON(res, 200, { success: r.failed.length === 0, error: r.failed.length ? '部分失败：' + r.failed.slice(0, 5).join('；') : undefined, restored: r.restored, failed: r.failed });
       return;
     }
 
@@ -244,7 +244,7 @@ async function handleRequest(req, res) {
     if (method === 'POST' && p === '/api/trash/empty') {
       const r = await appApi.trashEmpty();
       auditLog('trash-empty', { removed: r.removed, failed: r.failed.length });
-      sendJSON(res, 200, { success: r.failed.length === 0, removed: r.removed, failed: r.failed });
+      sendJSON(res, 200, { success: r.failed.length === 0, error: r.failed.length ? '部分失败：' + r.failed.slice(0, 5).join('；') : undefined, removed: r.removed, failed: r.failed });
       return;
     }
 
@@ -266,7 +266,7 @@ async function handleRequest(req, res) {
         mode,
       });
       auditLog('netdisk-delete', { mode, paths: (body.paths || []).length, moved: r.moved.length, failed: r.failed.length });
-      sendJSON(res, 200, { success: r.failed.length === 0, moved: r.moved, failed: r.failed });
+      sendJSON(res, 200, { success: r.failed.length === 0, error: r.failed.length ? '部分失败：' + r.failed.slice(0, 5).join('；') : undefined, moved: r.moved, failed: r.failed });
       return;
     }
 
@@ -288,7 +288,7 @@ async function handleRequest(req, res) {
         buildCache: !!body.buildCache,
       });
       auditLog('docker-delete', { containers: (body.containers || []).length, volumes: (body.volumes || []).length, networks: (body.networks || []).length, images: (body.images || []).length, buildCache: !!body.buildCache, moved: r.moved.length, failed: r.failed.length });
-      sendJSON(res, 200, { success: r.failed.length === 0, moved: r.moved, failed: r.failed });
+      sendJSON(res, 200, { success: r.failed.length === 0, error: r.failed.length ? '部分失败：' + r.failed.slice(0, 5).join('；') : undefined, moved: r.moved, failed: r.failed });
       return;
     }
 
@@ -308,7 +308,7 @@ async function handleRequest(req, res) {
         mode,
       });
       auditLog('tmp-delete', { mode, paths: (body.paths || []).length, moved: r.moved.length, failed: r.failed.length });
-      sendJSON(res, 200, { success: r.failed.length === 0, moved: r.moved, failed: r.failed });
+      sendJSON(res, 200, { success: r.failed.length === 0, error: r.failed.length ? '部分失败：' + r.failed.slice(0, 5).join('；') : undefined, moved: r.moved, failed: r.failed });
       return;
     }
 
@@ -325,7 +325,7 @@ async function handleRequest(req, res) {
       const body = await readBody(req);
       const r = await trashApi.deleteTrashItems({ paths: Array.isArray(body.paths) ? body.paths : [] });
       auditLog('sys-trash-delete', { paths: (body.paths || []).length, removed: r.removed.length, failed: r.failed.length });
-      sendJSON(res, 200, { success: r.failed.length === 0, removed: r.removed, failed: r.failed });
+      sendJSON(res, 200, { success: r.failed.length === 0, error: r.failed.length ? '部分失败：' + r.failed.slice(0, 5).join('；') : undefined, removed: r.removed, failed: r.failed });
       return;
     }
 
@@ -347,7 +347,7 @@ async function handleRequest(req, res) {
         mode,
       });
       auditLog('empty-delete', { mode, paths: (body.paths || []).length, moved: r.moved.length, failed: r.failed.length });
-      sendJSON(res, 200, { success: r.failed.length === 0, moved: r.moved, failed: r.failed });
+      sendJSON(res, 200, { success: r.failed.length === 0, error: r.failed.length ? '部分失败：' + r.failed.slice(0, 5).join('；') : undefined, moved: r.moved, failed: r.failed });
       return;
     }
 
@@ -386,7 +386,7 @@ async function handleRequest(req, res) {
         mode,
       });
       auditLog('dup-delete', { mode, files: (body.files || []).length, moved: r.moved.length, failed: r.failed.length });
-      sendJSON(res, 200, { success: r.failed.length === 0, moved: r.moved, failed: r.failed });
+      sendJSON(res, 200, { success: r.failed.length === 0, error: r.failed.length ? '部分失败：' + r.failed.slice(0, 5).join('；') : undefined, moved: r.moved, failed: r.failed });
       return;
     }
 
@@ -474,7 +474,7 @@ async function handleRequest(req, res) {
         snapshots: Array.isArray(body.snapshots) ? body.snapshots : [],
       });
       auditLog('kvm-delete', { snapshots: (body.snapshots || []).length, removed: r.removed.length, failed: r.failed.length });
-      sendJSON(res, 200, { success: r.failed.length === 0, removed: r.removed, failed: r.failed });
+      sendJSON(res, 200, { success: r.failed.length === 0, error: r.failed.length ? '部分失败：' + r.failed.slice(0, 5).join('；') : undefined, removed: r.removed, failed: r.failed });
       return;
     }
 
