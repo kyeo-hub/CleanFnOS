@@ -48,6 +48,24 @@ function esc(s) {
   }[c]));
 }
 
+/* ---------- 全局等待遮罩 ---------- */
+let loadingTimer = null;
+function showLoading(msg) {
+  $('loading-text').textContent = msg || '处理中…';
+  $('loading').classList.remove('hidden');
+  requestAnimationFrame(() => $('loading').classList.add('show'));
+}
+function hideLoading() {
+  clearTimeout(loadingTimer);
+  $('loading').classList.remove('show');
+  setTimeout(() => $('loading').classList.add('hidden'), 200);
+}
+/** 带遮罩执行长耗时操作：显示等待 → 执行 → 隐藏（finally 保证隐藏） */
+async function withLoading(msg, fn) {
+  showLoading(msg);
+  try { return await fn(); } finally { hideLoading(); }
+}
+
 async function api(path, body, timeoutMs = 120000) {
   const opt = body ? {
     method: 'POST',
@@ -144,15 +162,15 @@ async function oneClickClean() {
   const btn = $('btn-oneclick');
   btn.disabled = true;
   try {
-    // 并行扫描全部相关模块
-    const [appJ, dockerJ, tmpJ, sysJ, emptyJ, netJ] = await Promise.all([
+    // 并行扫描全部相关模块（遮罩提示，避免假死感）
+    const [appJ, dockerJ, tmpJ, sysJ, emptyJ, netJ] = await withLoading('正在扫描各模块，请稍候…', () => Promise.all([
       api('/scan', {}),
       api('/docker/scan', {}, 300000),
       api('/tmp/scan', {}),
       api('/sysclean/scan', {}),
       api('/empty/scan', {}),
       api('/netdisk/scan', {}),
-    ]);
+    ]));
     // 收集低风险推荐项
     const appPaths = (appJ.groups || []).filter((g) => g.risk === 'low').flatMap((g) => (g.items || []).map((i) => i.path));
     const dkImages = (dockerJ.images || []).filter((i) => i.dangling).map((i) => i.id);
@@ -174,18 +192,20 @@ async function oneClickClean() {
       `将清理以下<b>低风险推荐项</b>：<br>${parts.join('<br>')}<br><br>` +
       `<span style="color:var(--muted)">应用残留/临时文件/空目录/网盘残余<b>移入回收站可恢复</b>；Docker 与系统缓存为<b>永久删除</b>（可自动重建）。</span><br><br>确定继续吗？`,
       '一键清理', async () => {
-        const jobs = [];
-        if (appPaths.length) jobs.push(api('/delete', { paths: appPaths, links: [], users: [], mode: 'trash' }));
-        if (dkImages.length || dkCache) jobs.push(api('/docker/delete', { containers: [], volumes: [], networks: [], images: dkImages, buildCache: !!dkCache }, 600000));
-        if (tmpPaths.length) jobs.push(api('/tmp/delete', { paths: tmpPaths, mode: 'trash' }));
-        if (sysPaths.length) jobs.push(api('/sysclean/delete', { paths: sysPaths }));
-        if (emptyDirs.length) jobs.push(api('/empty/delete', { paths: emptyDirs, mode: 'trash' }));
-        if (netPaths.length) jobs.push(api('/netdisk/delete', { paths: netPaths, mode: 'trash' }));
-        const settled = await Promise.allSettled(jobs);
-        const ok = settled.filter((r) => r.status === 'fulfilled').length;
-        const fail = settled.filter((r) => r.status === 'rejected').length;
-        toast(`一键清理完成：${ok} 个模块成功${fail ? `，${fail} 个模块失败` : ''}`);
-        await Promise.allSettled([doScan(), scanDocker(), scanTmp(), scanSysclean(), scanEmpty(), scanNetdisk()]);
+        await withLoading('正在执行一键清理…', async () => {
+          const jobs = [];
+          if (appPaths.length) jobs.push(api('/delete', { paths: appPaths, links: [], users: [], mode: 'trash' }));
+          if (dkImages.length || dkCache) jobs.push(api('/docker/delete', { containers: [], volumes: [], networks: [], images: dkImages, buildCache: !!dkCache }, 600000));
+          if (tmpPaths.length) jobs.push(api('/tmp/delete', { paths: tmpPaths, mode: 'trash' }));
+          if (sysPaths.length) jobs.push(api('/sysclean/delete', { paths: sysPaths }));
+          if (emptyDirs.length) jobs.push(api('/empty/delete', { paths: emptyDirs, mode: 'trash' }));
+          if (netPaths.length) jobs.push(api('/netdisk/delete', { paths: netPaths, mode: 'trash' }));
+          const settled = await Promise.allSettled(jobs);
+          const ok = settled.filter((r) => r.status === 'fulfilled').length;
+          const fail = settled.filter((r) => r.status === 'rejected').length;
+          toast(`一键清理完成：${ok} 个模块成功${fail ? `，${fail} 个模块失败` : ''}`);
+          await Promise.allSettled([doScan(), scanDocker(), scanTmp(), scanSysclean(), scanEmpty(), scanNetdisk()]);
+        });
       });
   } catch (e) {
     toast('一键清理失败: ' + e.message, false);
@@ -369,7 +389,7 @@ $('btn-delete').addEventListener('click', () => {
     async () => {
       $('btn-delete').disabled = true;
       try {
-        const j = await api('/delete', { paths, links, users, mode });
+        const j = await withLoading(mode === 'permanent' ? '正在永久删除…' : '正在移入回收站…', () => api('/delete', { paths, links, users, mode }));
         const errs = (j.failed || []).length;
         toast(`完成：${(j.moved || []).length} 项成功${errs ? `，${errs} 项失败` : ''}`, errs === 0);
         if (j.failed && j.failed.length) toast('失败项: ' + j.failed.join('；'), false);
@@ -442,7 +462,7 @@ $('btn-trash-restore').addEventListener('click', () => {
 $('btn-trash-empty').addEventListener('click', () => {
   dangerConfirm('⚠️ 清空回收站', `将永久删除回收站中全部 <b>${state.trash.length}</b> 项，<b style="color:#d33">不可恢复</b>！确定吗？`, '全部删除', async () => {
     try {
-      const j = await api('/trash/empty', {});
+      const j = await withLoading('正在清空回收站…', () => api('/trash/empty', {}));
       toast(`已清空 ${j.removed} 项${(j.failed || []).length ? `，${j.failed.length} 项失败` : ''}`);
       await loadTrash();
     } catch (e) { toast('清空失败: ' + e.message, false); }
@@ -593,7 +613,7 @@ $('btn-docker-delete').addEventListener('click', () => {
     `${s.containers.length} 个已停止容器、${s.volumes.length} 个未用卷、${s.networks.length} 个未用网络、${s.images.length} 个 dangling 镜像${buildCacheNote}<br><br>` +
     '<b style="color:#d33">永久删除不可恢复！</b> 确定继续吗？', '永久删除', async () => {
     try {
-      const j = await api('/docker/delete', { ...s, buildCache: $('docker-buildcache').checked }, 600000); // 批量删除串行执行，给 10 分钟
+      const j = await withLoading('正在清理 Docker 资源…', () => api('/docker/delete', { ...s, buildCache: $('docker-buildcache').checked }, 600000)); // 批量删除串行执行，给 10 分钟
       toast(`完成：${(j.moved || []).length} 项成功${(j.failed || []).length ? `，${j.failed.length} 项失败` : ''}`);
       if (j.failed && j.failed.length) toast('失败项: ' + j.failed.join('；'), false);
       await scanDocker();
@@ -890,7 +910,7 @@ $('btn-dup-delete').addEventListener('click', () => {
   if (!files.length) return;
   confirmDialog('重复文件删除确认', `将删除 <b>${files.length}</b> 个重复文件副本（移入回收站可恢复，每个重复组保留第一个）。确定继续吗？`, '移入回收站', async () => {
     try {
-      const j = await api('/dup/delete', { files, mode: 'trash' });
+      const j = await withLoading('正在删除重复文件…', () => api('/dup/delete', { files, mode: 'trash' }));
       toast(`完成：${(j.moved || []).length} 项成功${(j.failed || []).length ? `，${j.failed.length} 项失败` : ''}`);
       await scanDup();
     } catch (e) { toast('删除失败: ' + e.message, false); }
@@ -1001,7 +1021,7 @@ $('btn-sysclean-delete').addEventListener('click', () => {
     (hasHigh ? '<b style="color:#d33">⚠️ 包含高风险项（浏览器缓存/Playwright，会丢登录态或需重下载）！</b><br>' : '') +
     '确定继续吗？', '永久清理', async () => {
     try {
-      const j = await api('/sysclean/delete', { paths });
+      const j = await withLoading('正在清理系统缓存…', () => api('/sysclean/delete', { paths }));
       toast(`完成：${(j.cleaned || []).length} 项成功${(j.failed || []).length ? `，${j.failed.length} 项失败` : ''}，释放 ${j.totalBytes ? (j.totalBytes / 1024 / 1024).toFixed(1) + ' MB' : '0 B'}`);
       await scanSysclean();
     } catch (e) { toast('清理失败: ' + e.message, false); }
@@ -1173,7 +1193,7 @@ $('btn-kvm-delete').addEventListener('click', () => {
   if (!snaps.length) return;
   dangerConfirm('⚠️ 鬼影快照删除确认', `将删除 <b>${snaps.length}</b> 个鬼影快照（运行中的 VM 会自动关停，删除后恢复）。<br><br><b style="color:#d33">删除不可恢复！</b> 确定继续吗？`, '永久删除', async () => {
     try {
-      const j = await api('/kvm/delete', { snapshots: snaps });
+      const j = await withLoading('正在删除鬼影快照…', () => api('/kvm/delete', { snapshots: snaps }));
       toast(`完成：${(j.removed || []).length} 个成功${(j.failed || []).length ? `，${j.failed.length} 个失败` : ''}`);
       if (j.failed && j.failed.length) toast('失败项: ' + j.failed.join('；'), false);
       await scanKvm();

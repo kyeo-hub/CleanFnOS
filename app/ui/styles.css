@@ -208,6 +208,31 @@ tbody tr:nth-child(even):hover { background: rgba(56, 189, 248, .07); }
   box-shadow: 0 8px 30px rgba(0,0,0,.4); font-size: 14px;
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ---------- 全局等待遮罩 ---------- */
+.loading {
+  position: fixed; inset: 0; z-index: 9998;
+  background: rgba(0, 0, 0, .35);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity .15s;
+}
+.loading.show { opacity: 1; }
+.loading.hidden { display: none; }
+.loading-box {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+  padding: 24px 32px; text-align: center;
+  box-shadow: 0 8px 30px rgba(0,0,0,.4);
+  min-width: 200px;
+}
+.spinner {
+  width: 36px; height: 36px; margin: 0 auto 12px;
+  border: 4px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+#loading-text { font-size: 14px; color: var(--text); }
 .toast.ok { border-color: var(--ok); }
 .toast.err { border-color: var(--danger); }
 
