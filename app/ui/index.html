@@ -225,17 +225,13 @@
   <!-- ============ 去重页 ============ -->
   <section id="view-dup" class="view">
     <div class="toolbar">
-      <select id="dup-type" title="扫描类型">
-        <option value="files">文件去重（全部）</option>
-        <option value="music"><span class="tip" data-term="Chromaprint / fpcalc">音乐去重</span>（音频指纹）</option>
-      </select>
       <input id="dup-path" value="/vol1/1000" placeholder="扫描目录（可多个用逗号分隔）" style="width:260px;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--panel2);color:var(--text)">
       <button id="btn-dup-scan" class="primary">🔄 扫描重复</button>
       <span id="dup-status" class="status"></span>
       <span class="spacer"></span>
       <button id="btn-dup-delete" class="danger" disabled>🗑 删除选中副本</button>
     </div>
-    <p class="hint">文件去重：按大小分组后 SHA-256 流式哈希识别重复文件。音乐去重：<span class="tip" data-term="Chromaprint 指纹">Chromaprint 音频指纹</span>识别同曲不同码率/格式，自动评分保留音质最佳（格式/码率/采样率/假无损检测）。删除默认移入回收站。</p>
+    <p class="hint">按大小分组后 SHA-256 流式哈希识别重复文件，删除默认移入回收站（每个重复组保留第一个）。</p>
     <div id="dup-stats" class="stats" style="display:none">
       <div class="stat"><b id="dup-stat-files">-</b><span>扫描文件</span></div>
       <div class="stat"><b id="dup-stat-groups">-</b><span>重复组</span></div>

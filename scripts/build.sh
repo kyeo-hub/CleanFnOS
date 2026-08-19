@@ -37,15 +37,6 @@ trap 'rm -rf "${WORK_DIR}"' EXIT
 echo "==> [${ARCH}] 复制应用源码到临时目录"
 cp -a "${APP_SRC}/." "${WORK_DIR}/"
 
-echo "==> [${ARCH}] 注入对应架构的 fpcalc（Chromaprint 指纹工具）"
-mkdir -p "${WORK_DIR}/app/bin"
-if [ "$ARCH" = "x86" ]; then
-  cp "${APP_SRC}/thirdparty/fpcalc-x86_64" "${WORK_DIR}/app/bin/fpcalc"
-else
-  cp "${APP_SRC}/thirdparty/fpcalc-aarch64" "${WORK_DIR}/app/bin/fpcalc"
-fi
-chmod +x "${WORK_DIR}/app/bin/fpcalc"
-
 echo "==> [${ARCH}] 设置 manifest arch=${MANIFEST_ARCH} platform=${MANIFEST_PLATFORM} version=${VERSION}"
 sed -i.tmp "s/^arch[[:space:]]*=.*/arch                  = ${MANIFEST_ARCH}/" "${WORK_DIR}/manifest"
 sed -i.tmp "s/^platform[[:space:]]*=.*/platform              = ${MANIFEST_PLATFORM}/" "${WORK_DIR}/manifest"

@@ -811,23 +811,17 @@ $('btn-empty-delete').addEventListener('click', () => {
 
 /* ---------- 去重 ---------- */
 async function scanDup() {
-  const type = $('dup-type').value;
   const paths = ($('dup-path').value || '').split(',').map((s) => s.trim()).filter(Boolean);
   if (!paths.length) { toast('请输入扫描目录', false); return; }
   $('dup-status').textContent = '扫描中…（大目录可能耗时）';
   $('btn-dup-scan').disabled = true;
   try {
-    // 音乐去重走音频指纹接口（Chromaprint，大曲库耗时长，给 600s），文件去重走哈希接口
-    const j = type === 'music'
-      ? await api('/dup/fingerprint', { paths }, 600000)
-      : await api('/dup/scan', { type, paths });
+    const j = await api('/dup/scan', { paths });
     state.dupGroups = j.groups || [];
     renderDup(j.stats || {});
     const st = j.stats || {};
-    $('dup-status').textContent = type === 'music'
-      ? `✓ 指纹扫描 ${st.totalFiles || 0} 个音频，${st.fingerprintOk || 0} 个生成指纹${st.fingerprintFailed ? `，${st.fingerprintFailed} 个失败` : ''}，${state.dupGroups.length} 组同曲${st.waveGroups ? `（含 ${st.waveGroups} 组疑似不同混音）` : ''}`
-      : `✓ 扫描 ${st.totalFiles || 0} 个文件，${state.dupGroups.length} 组重复`;
-    toast(type === 'music' ? '音乐指纹去重完成' : '重复文件去重完成');
+    $('dup-status').textContent = `✓ 扫描 ${st.totalFiles || 0} 个文件，${state.dupGroups.length} 组重复`;
+    toast('重复文件去重完成');
   } catch (e) {
     $('dup-status').textContent = '✗ 扫描失败';
     toast('扫描失败: ' + e.message, false);
@@ -847,40 +841,21 @@ function renderDup(stats) {
   wrap.innerHTML = '';
   $('no-dup').style.display = state.dupGroups.length ? 'none' : 'block';
 
-  // 判断是否为音乐指纹分组（含 fingerprint 字段与 bestPath）
-  const isMusic = state.dupGroups.length > 0 && !!state.dupGroups[0].fingerprint;
-
   for (const g of state.dupGroups) {
     const card = document.createElement('div');
     card.className = 'dup-card';
-    const headId = isMusic
-      ? (g.kind === 'wave'
-        ? `疑似同曲（不同混音/母带）<b>${g.count}</b> 个版本 / 可回收 <span style="color:#fbbf24">${esc(g.wastedText)}</span>`
-        : `同曲 <b>${g.count}</b> 个版本 / 可回收 <span style="color:#4ade80">${esc(g.wastedText)}</span>`)
-      : `<b>重复组</b> ${g.count} 个文件 / 可回收 <span style="color:#4ade80">${esc(g.wastedText)}</span>`;
-    const headHash = isMusic
-      ? (g.kind === 'wave'
-        ? `<span class="sz" title="波形相似（不同混音/母带，指纹不匹配但波形相关高）">🔊 波形相似</span>`
-        : `<span class="sz" title="音频指纹">${esc((g.fingerprint || '').slice(0, 16))}…</span>`)
-      : `<span class="sz">${esc(g.hash.slice(0, 12))}…</span>`;
     card.innerHTML = `<div class="dup-head">
-        ${headId}
-        ${headHash}
+        <b>重复组</b> ${g.count} 个文件 / 可回收 <span style="color:#4ade80">${esc(g.wastedText)}</span>
+        <span class="sz">${esc(g.hash.slice(0, 12))}…</span>
         <button class="dup-select-all plain" style="float:right">全选副本</button>
       </div>
       <table class="dup-files"><tbody></tbody></table>`;
     const tb = card.querySelector('tbody');
     g.files.forEach((f) => {
       const tr = document.createElement('tr');
-      const keep = isMusic ? !!f.isBest : (f === g.files[0]); // 音乐模式保留音质最佳；文件模式保留第一个
-      const id3 = f.id3 && (f.id3.title || f.id3.artist)
-        ? ` <span class="sz">[${esc(f.id3.artist || '')} - ${esc(f.id3.title || '')}${f.id3.album ? ' / ' + esc(f.id3.album) : ''}]</span>` : '';
-      const q = f.quality;
-      const qualityTxt = isMusic && q
-        ? ` <span class="sz">| ${esc(q.format)} ${esc(q.note || '')} <b>评分 ${q.score}</b>${q.fakeLossless ? ' <span style="color:#f87171">⚠假无损</span>' : ''}</span>`
-        : '';
+      const keep = (f === g.files[0]); // 每个重复组保留第一个
       tr.innerHTML = `<td><input type="checkbox" class="ck-dup" ${keep ? 'disabled' : ''}></td>
-        <td>${keep ? '<span class="risk risk-low">⭐保留</span>' : ''} <code>${esc(f.path)}</code>${id3}${qualityTxt}</td>
+        <td>${keep ? '<span class="risk risk-low">⭐保留</span>' : ''} <code>${esc(f.path)}</code></td>
         <td class="sz">${esc(f.sizeText)}</td>`;
       tb.appendChild(tr);
       const ck = tr.querySelector('.ck-dup');
@@ -1336,7 +1311,6 @@ const GLOSSARY = [
   { group: '技术术语', items: [
     { term: 'Docker', desc: '容器技术，把应用连同依赖打包运行，互不影响。飞牛商店里的 Docker 应用都用它运行。' },
     { term: '重复文件去重 / SHA-256', desc: '用"文件指纹"（SHA-256 哈希）比对文件内容，找出内容完全相同的重复文件，删除多余副本释放空间。' },
-    { term: 'ID3 / FLAC', desc: '音乐文件的元数据标签（歌名/歌手/专辑等信息）。音乐去重根据这些标签辅助识别重复歌曲。' },
     { term: '定时清理', desc: '按设定时间自动执行清理并生成报告，不用手动操作。' },
     { term: '风险分级', desc: '按清理操作的危险程度分低/中/高三档：低风险可放心清理（会自动重建），高风险（如删应用数据）需勾选确认。' },
   ]},

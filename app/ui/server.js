@@ -20,7 +20,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 const PORT = parseInt(process.env.PORT || '47939', 10);
-const VERSION = '1.6.5';
+const VERSION = '1.7.0';
 
 // 数据目录（cmd/main 注入 TRIM_PKGVAR；未注入时退化到本地 var）
 const VAR_DIR = process.env.TRIM_PKGVAR || path.join(__dirname, '..', '..', 'var');
@@ -356,20 +356,7 @@ async function handleRequest(req, res) {
     // POST /api/dup/scan
     if (method === 'POST' && p === '/api/dup/scan') {
       const body = await readBody(req);
-      const type = body.type === 'music' ? 'music' : 'files';
       const r = await dupApi.scanDup({
-        type,
-        paths: Array.isArray(body.paths) ? body.paths : [],
-      });
-      if (r.error) { sendJSON(res, 400, { success: false, error: r.error }); return; }
-      sendJSON(res, 200, { success: true, ...r });
-      return;
-    }
-
-    // POST /api/dup/fingerprint —— 音乐指纹去重（Chromaprint fpcalc）
-    if (method === 'POST' && p === '/api/dup/fingerprint') {
-      const body = await readBody(req);
-      const r = await dupApi.scanMusicFingerprint({
         paths: Array.isArray(body.paths) ? body.paths : [],
       });
       if (r.error) { sendJSON(res, 400, { success: false, error: r.error }); return; }
