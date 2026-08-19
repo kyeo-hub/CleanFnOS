@@ -77,6 +77,9 @@ body {
 .tab.active .tip { color: inherit; border-bottom-color: currentColor; }
 .count { font-size: 12px; opacity: .8; }
 
+.oneclick-bar { padding: 4px 12px 0; }
+.oneclick-bar button { width: 100%; }
+
 .sidebar-foot {
   display: flex; flex-direction: column; gap: 8px; padding: 12px;
   border-top: 1px solid var(--border);

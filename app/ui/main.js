@@ -139,6 +139,61 @@ function dangerConfirm(title, text, okLabel, cb) {
   confirmDialog(title, text, okLabel, cb, true);
 }
 
+/* ---------- 一键清理（所有模块低风险推荐项） ---------- */
+async function oneClickClean() {
+  const btn = $('btn-oneclick');
+  btn.disabled = true;
+  try {
+    // 并行扫描全部相关模块
+    const [appJ, dockerJ, tmpJ, sysJ, emptyJ, netJ] = await Promise.all([
+      api('/scan', {}),
+      api('/docker/scan', {}, 300000),
+      api('/tmp/scan', {}),
+      api('/sysclean/scan', {}),
+      api('/empty/scan', {}),
+      api('/netdisk/scan', {}),
+    ]);
+    // 收集低风险推荐项
+    const appPaths = (appJ.groups || []).filter((g) => g.risk === 'low').flatMap((g) => (g.items || []).map((i) => i.path));
+    const dkImages = (dockerJ.images || []).filter((i) => i.dangling).map((i) => i.id);
+    const dkCache = dockerJ.buildCache && dockerJ.buildCache.size !== '0 B';
+    const tmpPaths = (tmpJ.items || []).map((i) => i.path);
+    const sysPaths = (sysJ.items || []).filter((i) => i.recommended).map((i) => i.path);
+    const emptyDirs = emptyJ.dirs || [];
+    const netPaths = (netJ.items || []).map((i) => i.path);
+    const parts = [];
+    if (appPaths.length) parts.push(`应用残留 ${appPaths.length} 项`);
+    if (dkImages.length) parts.push(`Docker 悬空镜像 ${dkImages.length} 个`);
+    if (dkCache) parts.push('Docker Build Cache');
+    if (tmpPaths.length) parts.push(`临时文件 ${tmpPaths.length} 项`);
+    if (sysPaths.length) parts.push(`系统缓存 ${sysPaths.length} 项`);
+    if (emptyDirs.length) parts.push(`空目录 ${emptyDirs.length} 个`);
+    if (netPaths.length) parts.push(`网盘残余 ${netPaths.length} 项`);
+    if (!parts.length) { toast('未发现低风险推荐清理项', false); return; }
+    dangerConfirm('⚡ 一键清理',
+      `将清理以下<b>低风险推荐项</b>：<br>${parts.join('<br>')}<br><br>` +
+      `<span style="color:var(--muted)">应用残留/临时文件/空目录/网盘残余<b>移入回收站可恢复</b>；Docker 与系统缓存为<b>永久删除</b>（可自动重建）。</span><br><br>确定继续吗？`,
+      '一键清理', async () => {
+        const jobs = [];
+        if (appPaths.length) jobs.push(api('/delete', { paths: appPaths, links: [], users: [], mode: 'trash' }));
+        if (dkImages.length || dkCache) jobs.push(api('/docker/delete', { containers: [], volumes: [], networks: [], images: dkImages, buildCache: !!dkCache }, 600000));
+        if (tmpPaths.length) jobs.push(api('/tmp/delete', { paths: tmpPaths, mode: 'trash' }));
+        if (sysPaths.length) jobs.push(api('/sysclean/delete', { paths: sysPaths }));
+        if (emptyDirs.length) jobs.push(api('/empty/delete', { paths: emptyDirs, mode: 'trash' }));
+        if (netPaths.length) jobs.push(api('/netdisk/delete', { paths: netPaths, mode: 'trash' }));
+        const settled = await Promise.allSettled(jobs);
+        const ok = settled.filter((r) => r.status === 'fulfilled').length;
+        const fail = settled.filter((r) => r.status === 'rejected').length;
+        toast(`一键清理完成：${ok} 个模块成功${fail ? `，${fail} 个模块失败` : ''}`);
+        await Promise.allSettled([doScan(), scanDocker(), scanTmp(), scanSysclean(), scanEmpty(), scanNetdisk()]);
+      });
+  } catch (e) {
+    toast('一键清理失败: ' + e.message, false);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 /* ---------- 扫描 ---------- */
 async function doScan() {
   $('scan-status').textContent = '扫描中…';
@@ -1347,6 +1402,7 @@ document.querySelectorAll('.tab').forEach((b) => {
     $('version').textContent = 'v' + j.version;
   } catch (e) { /* ignore */ }
   $('btn-scan').addEventListener('click', doScan);
+  $('btn-oneclick').addEventListener('click', oneClickClean);
   $('btn-trash-refresh').addEventListener('click', loadTrash);
   $('btn-netdisk-scan').addEventListener('click', scanNetdisk);
   $('btn-docker-scan').addEventListener('click', scanDocker);
