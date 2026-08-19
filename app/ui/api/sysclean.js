@@ -117,6 +117,8 @@ function isSafeCleanPath(p) {
   if (/^\/var\/log\/(syslog|auth\.log|mail\.log|kern\.log|daemon\.log|user\.log|messages|dpkg\.log)/.test(p)) return true;
   // 用户缓存：/volN/<UID>/.cache 或 /.npm 下
   if (/^\/vol\d+\/\d+\/(\.cache|\.npm)(\/|$)/.test(p)) return true;
+  // root 用户缓存：/root/.cache 或 /root/.npm 下（root 的 home 不是 /volN/<UID>）
+  if (/^\/root\/(\.cache|\.npm)(\/|$)/.test(p)) return true;
   // 应用日志：/volN/@appcenter/<app>/logs 下
   if (/^\/vol\d+\/@appcenter\/[^/]+\/logs(\/|$)/.test(p)) return true;
   return false;
