@@ -989,25 +989,6 @@ $('chk-all-sysclean').addEventListener('change', (e) => {
   document.querySelectorAll('#tbl-sysclean tbody .ck-sysclean').forEach((ck) => { ck.checked = e.target.checked; });
   syncSyscleanBtn();
 });
-$('btn-sysclean-recommended').addEventListener('click', () => {
-  // 一键推荐清理：收集所有推荐项 → 确认 → 直接执行
-  const recs = state.sysclean.filter((i) => i.recommended);
-  if (!recs.length) { toast('暂无推荐清理项（请先扫描）', false); return; }
-  const paths = recs.map((i) => i.path);
-  const total = recs.reduce((s, i) => s + (i.size || 0), 0);
-  const totalText = total >= 1024 ** 3 ? (total / 1024 ** 3).toFixed(2) + ' GB'
-    : total >= 1024 ** 2 ? (total / 1024 ** 2).toFixed(2) + ' MB'
-    : total >= 1024 ? (total / 1024).toFixed(1) + ' KB' : total + ' B';
-  dangerConfirm('⚡ 一键推荐清理',
-    `将<b style="color:#d33">永久删除</b> <b>${paths.length}</b> 项低风险推荐项（apt/npm/pip/uv/系统日志等，可自动重建），共 <b>${totalText}</b>。<br><br>清理前自动备份清单，确定继续吗？`,
-    '一键清理', async () => {
-      try {
-        const j = await api('/sysclean/delete', { paths });
-        toast(`完成：${(j.cleaned || []).length} 项成功${(j.failed || []).length ? `，${j.failed.length} 项失败` : ''}，释放 ${j.totalBytes ? (j.totalBytes / 1024 / 1024).toFixed(1) + ' MB' : '0 B'}`);
-        await scanSysclean();
-      } catch (e) { toast('清理失败: ' + e.message, false); }
-    });
-});
 $('btn-sysclean-delete').addEventListener('click', () => {
   const paths = selectedSysclean();
   if (!paths.length) return;
