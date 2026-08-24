@@ -14,14 +14,16 @@ const MAX_DIRS = 50000; // 扫描目录数上限，防卡死
 
 // ---------------- 工具 ----------------
 
-/** 校验扫描/删除根路径：仅 /volN 下的普通目录 */
+/** 校验扫描/删除根路径：/volN 或 /volN/xxx/... 普通目录（容忍尾斜杠与空格） */
 function isSafeRoot(p) {
   if (typeof p !== 'string') return false;
-  const m = p.match(/^\/vol\d+(\/[^/]+)?$/);
-  if (!m) return false;
-  // 拒绝系统保留目录
-  const base = m[1] ? m[1].slice(1) : '';
-  if (base.startsWith('@app') || base.startsWith('.@#') || base === 'docker' || base === 'lost+found') return false;
+  p = p.trim().replace(/\/+$/, ''); // 去掉首尾空格与末尾斜杠
+  if (!/^\/vol\d+(\/[^/]+)*$/.test(p)) return false;
+  // 拒绝系统保留目录（任意层级出现都拒绝）
+  const segs = p.split('/').filter(Boolean).slice(1); // 去掉 volN
+  for (const s of segs) {
+    if (s.startsWith('@app') || s.startsWith('.@#') || s === 'docker' || s === 'lost+found') return false;
+  }
   return true;
 }
 
